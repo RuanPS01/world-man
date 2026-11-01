@@ -1,0 +1,11 @@
+{
+  "name": "worldman",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WorldMan: jogo de plataforma infinito em um planeta que gira, recriado para a web como PWA.",
+  "scripts": {
+    "start": "node tools/serve.mjs 8080",
+    "icons": "node tools/generate-icons.cjs",
+    "test": "node tools/smoke-test.cjs"
+  }
+}

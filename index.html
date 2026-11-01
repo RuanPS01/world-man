@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <title>WorldMan</title>
+    <meta name="description" content="WorldMan: corra ao redor do mundo, pule os ponteiros e derrube os inimigos com balas teleguiadas." />
+    <meta name="theme-color" content="#2b6072" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="WorldMan" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="assets/icons/icon-192.png" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
+    <link rel="preload" href="assets/fonts/cinzel-decorative-900-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="assets/fonts/cinzel-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="assets/fonts/crimson-text-600-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div id="stage" class="blurred">
+      <canvas id="view" aria-label="Cena do jogo"></canvas>
+      <div class="grain" aria-hidden="true"></div>
+
+      <!-- Ferramentas (som, tela cheia, pausa) -->
+      <div class="tools">
+        <button class="icon-btn" id="btn-pause" aria-label="Pausar" title="Pausar (P)" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
+        </button>
+        <button class="icon-btn" id="btn-sound" aria-label="Som" title="Som" aria-pressed="true">
+          <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" /><path class="stroke" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" /></svg>
+          <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" /><path class="stroke" d="M16 9l5 6M21 9l-5 6" /></svg>
+        </button>
+        <button class="icon-btn" id="btn-fullscreen" aria-label="Tela cheia" title="Tela cheia">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path class="stroke" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" /></svg>
+        </button>
+      </div>
+
+      <!-- HUD -->
+      <div id="hud" class="hud" hidden>
+        <div class="hud-panel">
+          <div class="hud-name" id="hud-name">WorldMan</div>
+          <div class="hud-line" id="hud-stops-line">Paradas <span id="hud-stops">20</span>x</div>
+          <div class="hud-line">Tempo: <span id="hud-time">0</span>s</div>
+          <div class="hud-stop" id="hud-stop" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <!-- Controles de toque -->
+      <div id="touch" class="touch" hidden>
+        <button class="tbtn tbtn-stop" data-action="stop" aria-label="Parar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" /></svg>
+          <span>Parar</span>
+        </button>
+        <div class="touch-right">
+          <button class="tbtn tbtn-shoot" data-action="shoot" aria-label="Atirar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle class="stroke" cx="12" cy="12" r="6.5" /><path class="stroke" d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5" /></svg>
+            <span>Atirar</span>
+          </button>
+          <button class="tbtn tbtn-jump" data-action="jump" aria-label="Pular">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l7 9h-4.5v5h-5v-5H5z" /></svg>
+            <span>Pular</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Menu principal -->
+      <section id="screen-menu" class="screen screen-menu">
+        <div class="frame">
+          <h1 class="logo"><span class="cap">W</span>orld<span class="cap">M</span>an</h1>
+          <nav class="ribbons" aria-label="Menu principal">
+            <button class="ribbon r1" id="btn-start"><span class="fold" aria-hidden="true"></span><span class="face">Start Game</span></button>
+            <button class="ribbon r2" id="btn-controls"><span class="fold" aria-hidden="true"></span><span class="face">Controls</span></button>
+            <button class="ribbon r3" id="btn-credits"><span class="fold" aria-hidden="true"></span><span class="face">Credits</span></button>
+          </nav>
+          <div class="name-panel">
+            <label for="name-input" class="np-title">Digite o Nome do personagem</label>
+            <div class="np-input">
+              <input id="name-input" type="text" maxlength="14" autocomplete="off" autocapitalize="off" spellcheck="false" value="WorldMan" enterkeyhint="go" />
+            </div>
+            <button id="btn-install" class="small-btn np-install" hidden>Instalar app</button>
+            <div class="np-version">Beta 1.0</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Controles -->
+      <section id="screen-controls" class="screen screen-band" hidden>
+        <div class="band">
+          <div class="frame band-inner">
+            <h2 class="band-title">Controles</h2>
+            <ul class="controls-list">
+              <li>
+                <span class="key" aria-label="Seta para cima"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l7 9H5z" /></svg></span>
+                Pula
+              </li>
+              <li>
+                <span class="key" aria-label="Seta para a esquerda"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l9-7v14z" /></svg></span>
+                Para de correr
+              </li>
+              <li><span class="key key-letter">X</span> Atira</li>
+            </ul>
+            <p class="obs">Obs.: O personagem se move para frente automaticamente no mundo e as balas da arma perseguem o inimigo.</p>
+            <p class="obs obs-small">Pule os ponteiros que giram no planeta. Você tem 20 paradas e cada uma dura até 2 segundos. Também valem W ou Espaço (pula), A (para), J (atira) e P (pausa). No celular, use os botões da tela.</p>
+          </div>
+        </div>
+        <div class="frame band-buttons">
+          <button class="gold-btn" data-back>Voltar</button>
+        </div>
+      </section>
+
+      <!-- Créditos -->
+      <section id="screen-credits" class="screen screen-band" hidden>
+        <div class="band">
+          <div class="frame band-inner">
+            <h2 class="band-title">Créditos</h2>
+            <ul class="credits-list">
+              <li>Ideia e protótipo original: RuanPS01, feito no Construct</li>
+              <li>Recriação para a web: HTML5 Canvas, WebGL e PWA</li>
+              <li>Arte, música e efeitos sonoros gerados por código</li>
+              <li>Fontes: Cinzel, Cinzel Decorative e Crimson Text (SIL Open Font License)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="frame band-buttons">
+          <button class="gold-btn" data-back>Voltar</button>
+        </div>
+      </section>
+
+      <!-- Fim de jogo -->
+      <section id="screen-over" class="screen screen-band" hidden>
+        <div class="band band-over">
+          <div class="frame band-inner over-inner">
+            <h2 class="over-title">Recorde atual: <span id="over-time" class="nocase">0s</span></h2>
+            <div class="over-new" id="over-new" hidden>Novo recorde!</div>
+            <ol class="ranking" id="ranking"></ol>
+            <div class="over-actions">
+              <button class="small-btn" id="btn-load">Carregar</button>
+              <button class="small-btn" id="btn-save">Salvar</button>
+            </div>
+          </div>
+        </div>
+        <div class="frame band-buttons two">
+          <button class="gold-btn retry" id="btn-retry">Repetir</button>
+          <button class="gold-btn pale" id="btn-menu">Menu principal</button>
+        </div>
+      </section>
+
+      <!-- Pausa -->
+      <section id="screen-pause" class="screen screen-band" hidden>
+        <div class="band band-pause">
+          <div class="frame band-inner">
+            <h2 class="band-title">Pausado</h2>
+            <p class="obs">Pressione P ou Esc para continuar.</p>
+          </div>
+        </div>
+        <div class="frame band-buttons two">
+          <button class="gold-btn retry" id="btn-resume">Continuar</button>
+          <button class="gold-btn pale" id="btn-quit">Menu principal</button>
+        </div>
+      </section>
+
+      <div class="rotate-hint" aria-live="polite">Gire o aparelho para a horizontal para jogar melhor.</div>
+      <div class="toast" id="toast" role="status"></div>
+    </div>
+
+    <noscript><p class="noscript">O WorldMan precisa de JavaScript para funcionar.</p></noscript>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

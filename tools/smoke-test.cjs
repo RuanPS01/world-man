@@ -1,0 +1,88 @@
+// Teste de fumaça: abre o jogo no Chromium, navega pelas telas, joga alguns
+// segundos e salva capturas. Uso: node tools/smoke-test.cjs [pasta-de-saida]
+// (precisa do servidor: node tools/serve.mjs 8080)
+const path = require('node:path');
+const fs = require('node:fs');
+const { chromium } = require('playwright');
+
+const URL = process.env.GAME_URL || 'http://localhost:8080/';
+const OUT = path.resolve(process.argv[2] || path.join(__dirname, '..', 'screenshots'));
+fs.mkdirSync(OUT, { recursive: true });
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+(async () => {
+  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  page.on('console', (m) => {
+    if (m.type() === 'error' || m.type() === 'warning') errors.push(`${m.type()}: ${m.text()}`);
+  });
+
+  await page.goto(URL);
+  await page.waitForFunction(() => window.__worldman && document.fonts.status === 'loaded');
+  await sleep(800);
+  await page.screenshot({ path: path.join(OUT, '01-menu.png') });
+
+  await page.click('#btn-controls');
+  await sleep(500);
+  await page.screenshot({ path: path.join(OUT, '02-controles.png') });
+  await page.click('#screen-controls [data-back]');
+  await page.click('#btn-credits');
+  await sleep(500);
+  await page.screenshot({ path: path.join(OUT, '03-creditos.png') });
+  await page.click('#screen-credits [data-back]');
+
+  await page.fill('#name-input', 'Tester');
+  await page.click('#btn-start');
+  await sleep(1500);
+  await page.screenshot({ path: path.join(OUT, '04-jogo.png') });
+
+  // pula, atira e para
+  await page.keyboard.down('ArrowUp');
+  await sleep(120);
+  await page.keyboard.up('ArrowUp');
+  await page.keyboard.down('KeyX');
+  await sleep(250);
+  await page.screenshot({ path: path.join(OUT, '05-pulo-tiro.png') });
+  await sleep(600);
+  await page.keyboard.up('KeyX');
+  await page.keyboard.down('ArrowLeft');
+  await sleep(400);
+  await page.screenshot({ path: path.join(OUT, '06-parada.png') });
+  await page.keyboard.up('ArrowLeft');
+
+  const state = await page.evaluate(() => {
+    const g = window.__worldman.game;
+    return { mode: g.mode, state: g.state, stops: g.player.stops, time: g.time, enemies: g.enemies.length };
+  });
+  console.log('estado:', JSON.stringify(state));
+
+  // pula direto para a fase cinza (20 s) para conferir o visual
+  await page.evaluate(() => {
+    const g = window.__worldman.game;
+    g.time = 20.2;
+  });
+  await page.waitForFunction(() => window.__worldman.game.filters.gray > 0.95 || window.__worldman.game.state !== 'run', null, { timeout: 15000 });
+  await sleep(200);
+  await page.screenshot({ path: path.join(OUT, '07-fase-cinza.png') });
+
+  // força o fim de jogo
+  await page.evaluate(() => window.__worldman.game.killPlayer('teste'));
+  await sleep(300);
+  await page.screenshot({ path: path.join(OUT, '07b-morte.png') });
+  await page.waitForSelector('#screen-over:not([hidden])', { timeout: 20000 });
+  await sleep(500);
+  await page.screenshot({ path: path.join(OUT, '08-fim.png') });
+  await page.click('#btn-save');
+  await sleep(300);
+  await page.screenshot({ path: path.join(OUT, '09-ranking.png') });
+
+  console.log(errors.length ? `PROBLEMAS:\n${errors.join('\n')}` : 'Nenhum erro no console.');
+  await browser.close();
+  process.exit(errors.some((e) => e.startsWith('pageerror')) ? 1 : 0);
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
