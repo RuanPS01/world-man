@@ -1,8 +1,8 @@
 # WorldMan
 
-Jogo de plataforma infinito em um pequeno planeta que gira. O personagem corre sozinho ao redor do mundo; você pula os ponteiros que giram a partir do centro do planeta, para de correr na hora certa e derruba os inimigos com balas teleguiadas. O objetivo é sobreviver o máximo de tempo possível.
+Jogo de plataforma infinito em um pequeno planeta que também é um relógio. O personagem corre sozinho ao redor do mundo enquanto os ponteiros giram a partir do centro do planeta; você pula os ponteiros, para de correr na hora certa e derruba os inimigos com balas teleguiadas. Com o passar do tempo o mundo atravessa as épocas da história, do cinema antigo até um futuro destruído. O objetivo é sobreviver o máximo de tempo possível.
 
-Esta é uma recriação para a web (PWA) do protótipo original feito no Construct, reconstruída a partir de capturas de tela e vídeos do jogo funcionando.
+Esta é uma recriação para a web (PWA) do protótipo original feito no Construct, reconstruída a partir de capturas de tela e vídeos do jogo funcionando, com a trilha original "Mundo Pequeno".
 
 ## Como jogar
 
@@ -18,12 +18,30 @@ Também funciona com controle (gamepad): A pula, B para, X atira, Start pausa.
 ### Mecânicas
 
 - **Corrida automática**: o mundo gira sob o personagem o tempo todo.
-- **Ponteiros**: duas hastes (uma cinza e uma azul) giram a partir do centro do planeta em velocidades e sentidos que mudam. Se uma delas passar pelo personagem enquanto ele está no chão, o jogo acaba. Pule por cima delas. De vez em quando um ponteiro se recolhe para dentro do planeta e fica inofensivo; quando está para fora, a ponta brilha.
-- **Paradas**: você começa com 20. Cada parada interrompe a corrida por até 2 segundos (o tempo restante aparece em vermelho no painel). Servem para deixar um foguete decolar, uma bomba cair na sua frente ou um ponteiro se afastar.
+- **Planeta-relógio**: o núcleo do planeta tem o mostrador gravado (marcas dos minutos e numerais) e três ponteiros clássicos pretos giram a partir do centro: o das horas (com ponta de espada, mais lento, vem de frente), o dos minutos (com anel) e o dos segundos (fino, o mais rápido). Os dois últimos chegam por trás. A ponta de cada ponteiro sempre fica acima do chão: se passar pelo personagem enquanto ele está no chão, o jogo acaba. Um tique-taque avisa quando um ponteiro está chegando e um alerta pisca na borda esquerda quando ele vem por trás. Nas épocas futuristas o tempo às vezes corre ao contrário e um ponteiro inverte o sentido.
+- **Paradas**: você começa com 20. Cada parada segura o personagem por até 2 segundos (o tempo restante aparece em vermelho no painel) e a tela treme enquanto você segura. No Android o aparelho também vibra. Servem para deixar um foguete decolar ou uma bomba cair na sua frente.
 - **Tiro teleguiado**: as balas perseguem o inimigo mais próximo.
-- **Inimigos**: balões e foguetes desde o início; a partir dos 20 segundos aparecem aviões, mísseis rasantes (um aviso vermelho pisca antes) e bombas lançadas por balões e aviões (a sombra no chão mostra onde vão cair). Encostar em qualquer um deles também termina o jogo.
-- **Fases**: a cada 20 segundos o mundo muda de aparência e fica mais difícil: colorido, depois cinza (como no original), sépia e noite, em ciclo. A velocidade, a quantidade de inimigos e a rapidez dos ponteiros aumentam; aos 40 segundos surge um terceiro ponteiro. Os ponteiros, o fogo e o clarão do tiro continuam coloridos mesmo no mundo cinza.
 - **Ranking**: na tela de fim de jogo, **Salvar** guarda a partida no top 10 e **Carregar** relê o ranking salvo neste navegador.
+
+### As épocas
+
+A cada 20 segundos o tempo avança para uma nova época. A mudança é gradual: uma "fronteira do tempo" surge logo à frente, fora da tela, e o cenário depois dela já pertence à nova época. Ao atravessá-la, o céu, os efeitos de imagem e a música se transformam aos poucos. Cada época é mais rápida que a anterior e traz seus próprios inimigos e obstáculos.
+
+| Tempo | Época | Visual | Inimigos e obstáculos |
+| --- | --- | --- | --- |
+| 0 s | Anos 1900 | sépia com grão, riscos e trepidação de filme antigo; moinhos e casinhas | balões, zepelins (sacos de areia), biplanos |
+| 20 s | Anos 1940 | preto e branco; celeiros, fábricas, postes de telégrafo | caças e zepelins com bombas, barricadas de sacos de areia |
+| 40 s | Anos 1970 | colorido com efeito de TV de tubo (linhas, aberração de cor, cantos arredondados) | foguetes, mísseis rasantes, discos voadores |
+| 60 s | Anos 2020 | alta definição, cores vivas e brilho; prédios de vidro e turbinas eólicas | helicópteros, drones, mísseis, barreiras de rua |
+| 80 s | Anos 2070 | cidade neon à noite com chuva | carros voadores, drones e mísseis neon, barreiras holográficas |
+| 100 s | Era Digital | mundo de grade luminosa no estilo Tron | sentinelas, discos de luz, jatos de luz, paredes de energia |
+| 120 s em diante | Fim dos Tempos | apocalipse: ruínas, árvores mortas, lixo, cinzas no ar | entulho caindo do céu, montes de lixo, barris rolando, drones sucateados |
+
+O Fim dos Tempos é a última época e continua para sempre, ficando cada vez mais rápido.
+
+### Música
+
+A trilha "Mundo Pequeno" toca em loop desde o primeiro toque na tela. Ela passa pelos mesmos filtros das épocas: som de gramofone com chiado no sépia, rádio antigo nos anos 1940, alto-falante de TV nos anos 1970, som limpo em alta definição, graves reforçados no futuro e um som abafado e mais lento no apocalipse.
 
 ## Rodando localmente
 
@@ -43,7 +61,7 @@ python3 -m http.server 8080
 
 O jogo é um site estático, então pode ser publicado em qualquer hospedagem com HTTPS (GitHub Pages, Netlify, Vercel, Cloudflare Pages). No GitHub Pages: em *Settings > Pages*, escolha *Deploy from a branch* e selecione a branch e a pasta raiz.
 
-Depois de publicado, o navegador oferece "Instalar app" (o menu também mostra um botão **Instalar app** quando disponível). Instalado, o jogo abre em tela cheia, na horizontal, e funciona sem internet.
+Depois de publicado, o navegador oferece "Instalar app" (o menu também mostra um botão **Instalar app** quando disponível). Instalado, o jogo abre em tela cheia, na horizontal, e funciona sem internet (a música também fica guardada).
 
 Ao alterar arquivos do jogo, aumente a constante `VERSION` em `sw.js` para que os jogadores recebam a atualização.
 
@@ -51,18 +69,23 @@ Ao alterar arquivos do jogo, aumente a constante `VERSION` em `sw.js` para que o
 
 ```
 index.html              telas (menu, controles, créditos, HUD, fim de jogo, pausa)
-css/style.css           visual das telas
+css/style.css           visual das telas, incluindo o painel de cada época
 js/main.js              inicialização, telas, laço principal, PWA
-js/game.js              regras: personagem, ponteiros, inimigos, tiros, câmera, fases
-js/enemies.js           balão, avião, foguete, míssil e bomba
-js/world.js             planeta: decorações, faixas de grama, céu
-js/sprites.js           toda a arte, desenhada por código
-js/post.js              pós-processamento WebGL: lente "olho de peixe", vinheta, desfoque das bordas e filtros de fase
-js/audio.js             efeitos e música sintetizados com Web Audio
+js/eras.js              as épocas: cores, efeitos, som, cenário, inimigos e dificuldade
+js/game.js              regras: personagem, ponteiros do relógio, inimigos, tiros, câmera
+js/enemies.js           arquétipos de inimigos (flutuante, voador, foguete, rasante, drone, obstáculo, queda)
+js/world.js             planeta-relógio: cenário por época, fronteira do tempo, mostrador, céu e clima
+js/draw.js              utilitários de desenho
+js/sprites.js           personagem e arte base
+js/art-decor.js         cenários de cada época
+js/art-foes.js          inimigos, projéteis e obstáculos de cada época
+js/post.js              pós-processamento WebGL: lente, desfoque, filme antigo, TV, brilho neon
+js/audio.js             música original com filtros por época e efeitos sintetizados
 js/input.js             teclado, toque e gamepad
 js/storage.js           nome, ranking e preferências (localStorage)
 sw.js                   service worker (cache offline)
 manifest.webmanifest    manifesto do PWA
+assets/audio            trilha "Mundo Pequeno"
 assets/fonts            Cinzel, Cinzel Decorative e Crimson Text (SIL OFL)
 assets/icons            ícones do app
 tools/                  servidor local, gerador de ícones e teste automatizado
@@ -80,7 +103,7 @@ node tools/generate-icons.cjs
 node tools/smoke-test.cjs
 ```
 
-O primeiro gera os ícones PNG a partir de `tools/icon.html`. O segundo abre o jogo, passa por todas as telas, joga alguns segundos, verifica erros no console e salva capturas em `screenshots/`.
+O primeiro gera os ícones PNG a partir de `tools/icon.html`. O segundo abre o jogo, passa por todas as telas e por todas as épocas, captura uma transição, verifica erros no console e salva capturas em `screenshots/`.
 
 ## O que foi deduzido dos vídeos
 
@@ -88,6 +111,5 @@ Algumas regras não aparecem com clareza nas gravações e foram interpretadas:
 
 - A morte nos vídeos acontece quando um ponteiro alcança o personagem no chão; pular por cima evita.
 - O "2s" vermelho aparece durante a parada; aqui ele mostra o tempo restante da parada (máximo de 2 segundos).
-- A fase cinza começa aos 20 segundos, como no vídeo. As fases sépia e noite, as bombas, os mísseis com aviso e o terceiro ponteiro foram acrescentados para o jogo infinito continuar ficando mais difícil.
 - "Salvar" e "Carregar" usam o armazenamento local do navegador.
-- A arte, a música e os efeitos sonoros foram recriados por código, inspirados no visual das capturas.
+- A arte e os efeitos sonoros foram recriados por código, inspirados no visual das capturas.

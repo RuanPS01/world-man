@@ -1,43 +1,28 @@
-// Som sintetizado com Web Audio: efeitos e uma trilha em loop (sem arquivos externos).
+// Som: a trilha original "Mundo Pequeno" (arquivo MP3) com filtros que mudam
+// a cada época, e efeitos sonoros sintetizados com Web Audio.
 
 const midi = (m) => 440 * Math.pow(2, (m - 69) / 12);
-const MINOR = { 4: 3, 9: 8, 11: 10 };
-const toMinor = (m) => {
-  const pc = ((m % 12) + 12) % 12;
-  return MINOR[pc] !== undefined ? m - pc + MINOR[pc] : m;
-};
-
-// Melodia original simples, 8 compassos de 16 semicolcheias: [passo, nota, duração].
-const MELODY = [
-  [[0, 72, 2], [2, 76, 2], [4, 79, 2], [6, 76, 2], [8, 77, 2], [10, 76, 2], [12, 74, 2], [14, 72, 2]],
-  [[0, 74, 2], [2, 71, 2], [4, 67, 3], [7, 71, 1], [8, 74, 2], [10, 79, 2], [12, 77, 2], [14, 74, 2]],
-  [[0, 72, 2], [2, 76, 2], [4, 81, 3], [7, 79, 1], [8, 76, 2], [10, 72, 2], [12, 74, 2], [14, 76, 2]],
-  [[0, 77, 3], [3, 76, 1], [4, 74, 2], [6, 72, 2], [8, 69, 4], [12, 71, 2], [14, 74, 2]],
-  [[0, 76, 2], [2, 79, 2], [4, 84, 2], [6, 79, 2], [8, 81, 2], [10, 79, 2], [12, 76, 2], [14, 74, 2]],
-  [[0, 74, 3], [3, 79, 1], [4, 83, 2], [6, 79, 2], [8, 74, 4], [12, 71, 2], [14, 74, 2]],
-  [[0, 76, 2], [2, 72, 2], [4, 69, 2], [6, 72, 2], [8, 76, 2], [10, 81, 2], [12, 79, 2], [14, 76, 2]],
-  [[0, 77, 2], [2, 74, 2], [4, 71, 2], [6, 74, 2], [8, 72, 6], [14, 67, 2]],
-];
-const CHORDS = [
-  [36, 'M'],
-  [43, 'M'],
-  [45, 'm'],
-  [41, 'M'],
-  [36, 'M'],
-  [43, 'M'],
-  [45, 'm'],
-  [43, 'M'],
-];
 
 export class Sound {
   constructor() {
     this.ctx = null;
     this.muted = false;
-    this.musicOn = false;
-    this.mood = { minor: false, cutoff: 5200 };
-    this.step = 0;
-    this.nextTime = 0;
-    this.timer = null;
+    this.wantMusic = false;
+    this.musicBuffer = null;
+    this.musicSrc = null;
+    this.raw = null;
+    this.profile = { hp: 20, lp: 20000, peakF: 1000, peakG: 0, crackle: 0, rate: 1 };
+  }
+
+  /** Baixa o arquivo da música antes do primeiro toque (para começar rápido). */
+  prefetch(url) {
+    this.url = url;
+    this.raw = fetch(url)
+      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .catch((err) => {
+        console.warn('[WorldMan] Música indisponível:', err.message);
+        return null;
+      });
   }
 
   unlock() {
@@ -52,19 +37,73 @@ export class Sound {
       this.sfxBus = ctx.createGain();
       this.sfxBus.gain.value = 0.8;
       this.sfxBus.connect(this.master);
-      this.musicFilter = ctx.createBiquadFilter();
-      this.musicFilter.type = 'lowpass';
-      this.musicFilter.frequency.value = this.mood.cutoff;
-      this.musicBus = ctx.createGain();
-      this.musicBus.gain.value = 0.32;
-      this.musicBus.connect(this.musicFilter);
-      this.musicFilter.connect(this.master);
+
+      // cadeia da música: passa-altas, passa-baixas, equalizador, volume
+      this.hp = ctx.createBiquadFilter();
+      this.hp.type = 'highpass';
+      this.lp = ctx.createBiquadFilter();
+      this.lp.type = 'lowpass';
+      this.peak = ctx.createBiquadFilter();
+      this.peak.type = 'peaking';
+      this.peak.Q.value = 0.9;
+      this.musicGain = ctx.createGain();
+      this.musicGain.gain.value = 0;
+      this.hp.connect(this.lp);
+      this.lp.connect(this.peak);
+      this.peak.connect(this.musicGain);
+      this.musicGain.connect(this.master);
+
       const len = ctx.sampleRate;
       this.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
       const data = this.noiseBuf.getChannelData(0);
       for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+
+      // chiado de disco antigo (estalos esparsos), em loop
+      const cl = ctx.sampleRate * 2;
+      const crackle = ctx.createBuffer(1, cl, ctx.sampleRate);
+      const cd = crackle.getChannelData(0);
+      for (let i = 0; i < cl; i++) {
+        cd[i] += (Math.random() - 0.5) * 0.02;
+        if (Math.random() < 0.0007) {
+          const amp = (Math.random() - 0.5) * 1.6;
+          for (let k = 0; k < 6 && i + k < cl; k++) cd[i + k] += amp * Math.pow(0.55, k);
+        }
+      }
+      this.crackleGain = ctx.createGain();
+      this.crackleGain.gain.value = 0;
+      const crSrc = ctx.createBufferSource();
+      crSrc.buffer = crackle;
+      crSrc.loop = true;
+      const crFilter = ctx.createBiquadFilter();
+      crFilter.type = 'bandpass';
+      crFilter.frequency.value = 2200;
+      crFilter.Q.value = 0.6;
+      crSrc.connect(crFilter);
+      crFilter.connect(this.crackleGain);
+      this.crackleGain.connect(this.master);
+      crSrc.start();
+
+      this.applyProfile(this.profile, true);
+      this.decodeMusic();
     }
     if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+  }
+
+  decodeMusic() {
+    if (!this.raw || this.decoding) return;
+    this.decoding = true;
+    this.raw
+      .then((buf) => {
+        if (!buf) return null;
+        return new Promise((res, rej) => this.ctx.decodeAudioData(buf, res, rej));
+      })
+      .then((ab) => {
+        if (!ab) return;
+        this.musicBuffer = ab;
+        this.loopEnd = findLoopEnd(ab);
+        if (this.wantMusic) this.startMusic();
+      })
+      .catch((err) => console.warn('[WorldMan] Não foi possível decodificar a música:', err && err.message));
   }
 
   setMuted(m) {
@@ -80,7 +119,64 @@ export class Sound {
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
   }
 
-  // ------------------------------------------------------------ Síntese
+  // ------------------------------------------------------------ Música
+
+  startMusic() {
+    this.wantMusic = true;
+    if (!this.ctx || !this.musicBuffer || this.musicSrc) return;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.musicBuffer;
+    src.loop = true;
+    src.loopStart = 0;
+    src.loopEnd = this.loopEnd;
+    src.playbackRate.value = this.profile.rate;
+    src.connect(this.hp);
+    src.start();
+    this.musicSrc = src;
+    const t = this.ctx.currentTime;
+    this.musicGain.gain.cancelScheduledValues(t);
+    this.musicGain.gain.setValueAtTime(0, t);
+    this.musicGain.gain.linearRampToValueAtTime(0.75, t + 1.2);
+  }
+
+  stopMusic() {
+    this.wantMusic = false;
+    if (!this.musicSrc) return;
+    const t = this.ctx.currentTime;
+    this.musicGain.gain.setTargetAtTime(0, t, 0.2);
+    const src = this.musicSrc;
+    this.musicSrc = null;
+    setTimeout(() => src.stop(), 900);
+  }
+
+  /** Aplica o perfil sonoro de uma época (ou a mistura de duas). */
+  setProfile(p) {
+    const q = this.profile;
+    const changed =
+      Math.abs(p.hp - q.hp) / (q.hp + 1) > 0.03 ||
+      Math.abs(p.lp - q.lp) / (q.lp + 1) > 0.03 ||
+      Math.abs(p.peakG - q.peakG) > 0.2 ||
+      Math.abs(p.peakF - q.peakF) / (q.peakF + 1) > 0.03 ||
+      Math.abs(p.crackle - q.crackle) > 0.01 ||
+      Math.abs(p.rate - q.rate) > 0.004;
+    if (!changed) return;
+    this.profile = { ...p };
+    this.applyProfile(p);
+  }
+
+  applyProfile(p, now = false) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const k = now ? 0.001 : 0.25;
+    this.hp.frequency.setTargetAtTime(Math.max(10, p.hp), t, k);
+    this.lp.frequency.setTargetAtTime(Math.min(20000, p.lp), t, k);
+    this.peak.frequency.setTargetAtTime(p.peakF, t, k);
+    this.peak.gain.setTargetAtTime(p.peakG, t, k);
+    this.crackleGain.gain.setTargetAtTime(p.crackle, t, k);
+    if (this.musicSrc) this.musicSrc.playbackRate.setTargetAtTime(p.rate, t, 0.6);
+  }
+
+  // ------------------------------------------------------------ Efeitos
 
   tone(freq, t, dur, { type = 'square', gain = 0.1, dest, attack = 0.004, slide = null, release = 0.04 } = {}) {
     const ctx = this.ctx;
@@ -123,18 +219,18 @@ export class Sound {
     const t = this.ctx.currentTime + 0.005;
     switch (name) {
       case 'jump':
-        this.tone(320, t, 0.14, { type: 'square', gain: 0.07, slide: 760 });
+        this.tone(320, t, 0.14, { type: 'square', gain: 0.06, slide: 760 });
         break;
       case 'shoot':
-        this.tone(980, t, 0.07, { type: 'square', gain: 0.035, slide: 260 });
-        this.noise(t, 0.05, { gain: 0.05, type: 'highpass', freq: 3000 });
+        this.tone(980, t, 0.07, { type: 'square', gain: 0.03, slide: 260 });
+        this.noise(t, 0.05, { gain: 0.045, type: 'highpass', freq: 3000 });
         break;
       case 'hit':
         this.tone(640, t, 0.06, { type: 'triangle', gain: 0.08, slide: 380 });
         break;
       case 'explosion':
-        this.noise(t, 0.55, { gain: 0.32, type: 'lowpass', freq: 1400, endFreq: 160 });
-        this.tone(110, t, 0.35, { type: 'sine', gain: 0.3, slide: 38 });
+        this.noise(t, 0.55, { gain: 0.3, type: 'lowpass', freq: 1400, endFreq: 160 });
+        this.tone(110, t, 0.35, { type: 'sine', gain: 0.28, slide: 38 });
         break;
       case 'death':
         this.tone(520, t, 0.75, { type: 'sawtooth', gain: 0.09, slide: 70, release: 0.3 });
@@ -154,8 +250,24 @@ export class Sound {
       case 'rocket':
         this.noise(t, 1.1, { gain: 0.16, type: 'bandpass', freq: 300, endFreq: 2400, q: 1.2 });
         break;
-      case 'phase':
-        [72, 76, 79, 84].forEach((n, i) => this.tone(midi(n), t + i * 0.07, 0.22, { type: 'triangle', gain: 0.07 }));
+      case 'tick':
+        // tique de relógio: aviso de que um ponteiro está chegando
+        this.noise(t, 0.035, { gain: 0.22, type: 'highpass', freq: 3500 });
+        this.tone(2400, t, 0.04, { type: 'triangle', gain: 0.09, slide: 1600 });
+        break;
+      case 'tock':
+        this.noise(t, 0.05, { gain: 0.2, type: 'bandpass', freq: 1400, q: 2 });
+        this.tone(1100, t, 0.06, { type: 'triangle', gain: 0.1, slide: 700 });
+        break;
+      case 'era':
+        // badalada de relógio ao entrar numa nova época
+        for (const [f, g] of [
+          [midi(64), 0.12],
+          [midi(76), 0.06],
+          [midi(83), 0.03],
+        ]) {
+          this.tone(f, t, 1.6, { type: 'sine', gain: g, attack: 0.005, release: 1.4 });
+        }
         break;
       case 'save':
         this.tone(midi(79), t, 0.12, { type: 'triangle', gain: 0.08 });
@@ -168,75 +280,14 @@ export class Sound {
         break;
     }
   }
+}
 
-  // ------------------------------------------------------------ Música
-
-  setLook(look) {
-    const moods = {
-      color: { minor: false, cutoff: 5200 },
-      gray: { minor: true, cutoff: 2600 },
-      sepia: { minor: false, cutoff: 1500 },
-      night: { minor: true, cutoff: 1100 },
-    };
-    this.mood = moods[look] || moods.color;
-    if (this.musicFilter) this.musicFilter.frequency.setTargetAtTime(this.mood.cutoff, this.ctx.currentTime, 0.3);
+/** Fim do trecho com som (ignora o silêncio no final do arquivo para o loop não ter pausa). */
+function findLoopEnd(buf) {
+  const ch = buf.getChannelData(0);
+  const step = 64;
+  for (let i = ch.length - 1; i > 0; i -= step) {
+    if (Math.abs(ch[i]) > 0.003) return Math.min(buf.duration, i / buf.sampleRate + 0.02);
   }
-
-  startMusic() {
-    if (!this.ctx) return;
-    if (this.musicOn) return;
-    this.musicOn = true;
-    this.step = 0;
-    this.nextTime = this.ctx.currentTime + 0.08;
-    this.timer = setInterval(() => this.schedule(), 25);
-  }
-
-  stopMusic() {
-    this.musicOn = false;
-    clearInterval(this.timer);
-    this.timer = null;
-  }
-
-  schedule() {
-    if (!this.ctx || this.ctx.state !== 'running') return;
-    const spb = 60 / 112 / 4; // duração de uma semicolcheia
-    // se o navegador atrasou o timer (aba em segundo plano), pula as notas perdidas
-    if (this.nextTime < this.ctx.currentTime - 0.05) this.nextTime = this.ctx.currentTime + 0.02;
-    while (this.nextTime < this.ctx.currentTime + 0.12) {
-      this.playStep(this.step, this.nextTime, spb);
-      this.step = (this.step + 1) % (16 * MELODY.length);
-      this.nextTime += spb;
-    }
-  }
-
-  playStep(step, t, spb) {
-    const bar = Math.floor(step / 16);
-    const s = step % 16;
-    const minor = this.mood.minor;
-    const n = (m) => (minor ? toMinor(m) : m);
-    const bus = this.musicBus;
-    const [root, q] = CHORDS[bar];
-
-    // bateria
-    if (s === 0 || s === 8 || s === 10) this.tone(120, t, 0.13, { type: 'sine', gain: 0.32, slide: 42, dest: bus });
-    if (s === 4 || s === 12) this.noise(t, 0.12, { gain: 0.1, type: 'bandpass', freq: 1900, q: 0.7, dest: bus });
-    if (s % 2 === 0) this.noise(t, 0.03, { gain: s % 4 === 2 ? 0.05 : 0.025, type: 'highpass', freq: 7000, dest: bus });
-
-    // baixo
-    const bassPat = { 0: 0, 3: 0, 6: 12, 8: 0, 11: 7, 14: 12 };
-    if (bassPat[s] !== undefined) this.tone(midi(n(root + bassPat[s])), t, spb * 1.8, { type: 'triangle', gain: 0.2, dest: bus });
-
-    // arpejo
-    const third = q === 'm' ? 3 : 4;
-    const arp = [0, third, 7, 12];
-    if (s % 2 === 1) {
-      const note = root + 24 + arp[((s - 1) / 2) % 4];
-      this.tone(midi(n(note)), t, spb * 0.9, { type: 'triangle', gain: 0.035, dest: bus });
-    }
-
-    // melodia
-    for (const [st, note, len] of MELODY[bar]) {
-      if (st === s) this.tone(midi(n(note)), t, spb * len * 0.92, { type: 'square', gain: 0.045, dest: bus, release: 0.05 });
-    }
-  }
+  return buf.duration;
 }

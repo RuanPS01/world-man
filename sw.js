@@ -1,7 +1,7 @@
 // Service worker do WorldMan: guarda todos os arquivos para jogar offline.
 // Ao mudar qualquer arquivo do jogo, aumente a versão abaixo.
 
-const VERSION = 'worldman-v1.0.0';
+const VERSION = 'worldman-v2.0.0';
 
 const ASSETS = [
   './',
@@ -10,6 +10,10 @@ const ASSETS = [
   './css/style.css',
   './js/main.js',
   './js/config.js',
+  './js/eras.js',
+  './js/draw.js',
+  './js/art-decor.js',
+  './js/art-foes.js',
   './js/utils.js',
   './js/sprites.js',
   './js/world.js',
@@ -19,6 +23,7 @@ const ASSETS = [
   './js/input.js',
   './js/audio.js',
   './js/storage.js',
+  './assets/audio/mundo-pequeno.mp3',
   './assets/fonts/cinzel-latin.woff2',
   './assets/fonts/cinzel-decorative-700-latin.woff2',
   './assets/fonts/cinzel-decorative-900-latin.woff2',

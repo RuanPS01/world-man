@@ -47,11 +47,6 @@ export const BULLET = {
   range: 1700,
 };
 
-/** A cada FASE_DURACAO segundos o mundo muda de aparência e fica mais difícil. */
-export const PHASE_DURATION = 20;
-/** Ciclo visual das fases: 0 colorido, 1 cinza (como no original), 2 sépia, 3 noite. */
-export const PHASE_LOOKS = ['color', 'gray', 'sepia', 'night'];
-
 export const POST = {
   s0: 0.86, // escala no centro (lente "bulge")
   k: 0.42, // força da distorção de barril

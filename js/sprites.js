@@ -1,45 +1,16 @@
 // Arte procedural: todos os desenhos do jogo são feitos com Canvas 2D,
 // pré-renderizados em pequenos canvases (sprites) para desempenho.
 
-import { makeCanvas, roundRectPath, seeded, lerp } from './utils.js';
+import { roundRectPath, seeded, lerp } from './utils.js';
+import { createSprite, drawSprite, blobPath, cloudCircles, paintCloud, cloudSprite } from './draw.js';
+import { buildDecor } from './art-decor.js';
+import { buildFoes } from './art-foes.js';
 
-const SPR_SCALE = 2;
-
-/** Cria um sprite: desenha em `w x h` unidades com âncora (ax, ay). */
-export function createSprite(w, h, ax, ay, draw) {
-  const canvas = makeCanvas(w * SPR_SCALE, h * SPR_SCALE);
-  const g = canvas.getContext('2d');
-  g.scale(SPR_SCALE, SPR_SCALE);
-  g.lineJoin = 'round';
-  g.lineCap = 'round';
-  draw(g, w, h);
-  return { canvas, w, h, ax, ay };
-}
-
-/** Desenha um sprite com a âncora em (x, y). */
-export function drawSprite(ctx, s, x = 0, y = 0, scale = 1, flip = false) {
-  if (flip) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(-1, 1);
-    ctx.drawImage(s.canvas, -s.ax * scale, -s.ay * scale, s.w * scale, s.h * scale);
-    ctx.restore();
-    return;
-  }
-  ctx.drawImage(s.canvas, x - s.ax * scale, y - s.ay * scale, s.w * scale, s.h * scale);
-}
-
-function blobPath(g, circles) {
-  g.beginPath();
-  for (const [x, y, r] of circles) {
-    g.moveTo(x + r, y);
-    g.arc(x, y, r, 0, Math.PI * 2);
-  }
-}
+export { createSprite, drawSprite };
 
 // ---------------------------------------------------------------- Árvores
 
-function roundTree(rng, palette) {
+export function roundTree(rng, palette) {
   const r = rng(26, 40);
   const trunkH = rng(38, 62);
   const lean = rng(-14, 14);
@@ -93,7 +64,7 @@ function roundTree(rng, palette) {
   });
 }
 
-function pineCluster(rng, palette) {
+export function pineCluster(rng, palette) {
   const n = 1 + Math.floor(rng(0, 3));
   const trees = [];
   let maxH = 0;
@@ -136,40 +107,7 @@ function pineCluster(rng, palette) {
 
 // ---------------------------------------------------------------- Montanhas
 
-function cloudCircles(cx, cy, wdt, rng, count = 6) {
-  const out = [];
-  for (let i = 0; i < count; i++) {
-    const t = count === 1 ? 0.5 : i / (count - 1);
-    const x = cx - wdt / 2 + t * wdt;
-    const rr = (1 - Math.abs(t - 0.5) * 1.1) * wdt * 0.22 + rng(2, 8);
-    out.push([x, cy - rr * 0.35 + rng(-3, 3), rr]);
-  }
-  return out;
-}
-
-function paintCloud(g, circles, light, shade) {
-  blobPath(g, circles);
-  g.fillStyle = light;
-  g.fill();
-  g.save();
-  blobPath(g, circles);
-  g.clip();
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (const [, y, r] of circles) {
-    minY = Math.min(minY, y - r);
-    maxY = Math.max(maxY, y + r);
-  }
-  const grd = g.createLinearGradient(0, minY, 0, maxY);
-  grd.addColorStop(0, 'rgba(255,255,255,0)');
-  grd.addColorStop(0.55, 'rgba(255,255,255,0)');
-  grd.addColorStop(1, shade);
-  g.fillStyle = grd;
-  g.fillRect(-1000, minY, 3000, maxY - minY);
-  g.restore();
-}
-
-function mountainCloudy(rng) {
+export function mountainCloudy(rng) {
   const w = rng(280, 340);
   const h = rng(170, 210);
   return createSprite(w + 40, h + 40, (w + 40) / 2, h + 38, (g) => {
@@ -217,7 +155,7 @@ function mountainCloudy(rng) {
   });
 }
 
-function mountainSnowy(rng) {
+export function mountainSnowy(rng) {
   const w = rng(300, 380);
   const h = rng(200, 250);
   return createSprite(w + 20, h + 10, (w + 20) / 2, h + 8, (g) => {
@@ -270,7 +208,7 @@ function mountainSnowy(rng) {
   });
 }
 
-function hill(rng) {
+export function hill(rng) {
   const w = rng(170, 230);
   const h = rng(90, 120);
   return createSprite(w + 10, h + 6, (w + 10) / 2, h + 4, (g) => {
@@ -291,7 +229,7 @@ function hill(rng) {
   });
 }
 
-function fence() {
+export function fence() {
   return createSprite(140, 56, 70, 54, (g) => {
     g.fillStyle = '#5b3216';
     for (const x of [22, 74, 118]) {
@@ -313,36 +251,27 @@ function fence() {
 // ---------------------------------------------------------------- Nuvens
 
 function skyCloud(rng) {
-  const w = rng(160, 280);
-  const circles = cloudCircles(0, 0, w, rng, 5 + Math.floor(rng(0, 3)));
-  // achata a base para parecer nuvem de desenho
-  circles.push([0, w * 0.06, w * 0.3]);
-  let x0 = Infinity;
-  let x1 = -Infinity;
-  let y0 = Infinity;
-  let y1 = -Infinity;
-  for (const [x, y, r] of circles) {
-    x0 = Math.min(x0, x - r);
-    x1 = Math.max(x1, x + r);
-    y0 = Math.min(y0, y - r);
-    y1 = Math.max(y1, y + r);
-  }
-  const pad = 4;
-  const sw = x1 - x0 + pad * 2;
-  const sh = y1 - y0 + pad * 2;
-  const shifted = circles.map(([x, y, r]) => [x - x0 + pad, y - y0 + pad, r]);
-  return createSprite(sw, sh, sw / 2, sh - pad, (g) => {
-    paintCloud(g, shifted, 'rgba(255,255,255,0.93)', 'rgba(185,220,236,0.95)');
-  });
+  return cloudSprite(rng, 'rgba(255,255,255,0.93)', 'rgba(185,220,236,0.95)');
 }
 
 // ---------------------------------------------------------------- Inimigos
 
-function rocket() {
+export function rocket(c = {}) {
+  const k = {
+    body: '#f4f4f2',
+    shade: '#d3d8db',
+    red: '#d6322b',
+    redDark: '#b52520',
+    rim: '#8e979c',
+    glass: '#5fb1c3',
+    nozzle: '#6f7377',
+    rust: null,
+    ...c,
+  };
   return createSprite(52, 128, 26, 124, (g) => {
     const cx = 26;
     // aletas
-    g.fillStyle = '#d6322b';
+    g.fillStyle = k.red;
     g.beginPath();
     g.moveTo(14, 88);
     g.lineTo(2, 122);
@@ -363,25 +292,33 @@ function rocket() {
     body.quadraticCurveTo(38, 14, 38, 44);
     body.lineTo(38, 116);
     body.closePath();
-    g.fillStyle = '#f4f4f2';
+    g.fillStyle = k.body;
     g.fill(body);
     g.save();
     g.clip(body);
-    g.fillStyle = '#d3d8db';
+    g.fillStyle = k.shade;
     g.fillRect(cx + 3, 0, 20, 130);
-    g.fillStyle = '#d6322b';
+    g.fillStyle = k.red;
     g.fillRect(0, 0, 60, 30);
-    g.fillStyle = '#b52520';
+    g.fillStyle = k.redDark;
     g.fillRect(cx + 3, 0, 20, 30);
-    g.fillStyle = '#d6322b';
+    g.fillStyle = k.red;
     g.fillRect(0, 98, 60, 6);
+    if (k.rust) {
+      g.fillStyle = k.rust;
+      for (const [x, y, r] of [[18, 70, 6], [32, 84, 5], [20, 104, 7], [30, 40, 4]]) {
+        g.beginPath();
+        g.ellipse(x, y, r * 1.2, r, 0.4, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
     g.restore();
     // janela
-    g.fillStyle = '#8e979c';
+    g.fillStyle = k.rim;
     g.beginPath();
     g.arc(cx, 56, 9.5, 0, Math.PI * 2);
     g.fill();
-    g.fillStyle = '#5fb1c3';
+    g.fillStyle = k.glass;
     g.beginPath();
     g.arc(cx, 56, 6.5, 0, Math.PI * 2);
     g.fill();
@@ -390,7 +327,7 @@ function rocket() {
     g.arc(cx - 2.2, 53.6, 2.2, 0, Math.PI * 2);
     g.fill();
     // bocal
-    g.fillStyle = '#6f7377';
+    g.fillStyle = k.nozzle;
     g.beginPath();
     roundRectPath(g, 17, 115, 18, 9, 2);
     g.fill();
@@ -567,10 +504,16 @@ function plane() {
   });
 }
 
-function missile() {
-  return createSprite(54, 22, 27, 11, (g) => {
+export function missile(c = {}) {
+  const k = { fin: '#4b5156', body: '#979ea4', light: '#c6ccd1', band: '#5b6166', nose: '#ecebe6', tip: '#c4302b', glow: null, ...c };
+  return createSprite(60, 28, 30, 14, (g) => {
+    g.translate(3, 3);
+    if (k.glow) {
+      g.shadowColor = k.glow;
+      g.shadowBlur = 6;
+    }
     // aletas (traseira à direita)
-    g.fillStyle = '#4b5156';
+    g.fillStyle = k.fin;
     g.beginPath();
     g.moveTo(40, 6);
     g.lineTo(52, 0);
@@ -583,23 +526,23 @@ function missile() {
     g.lineTo(52, 15);
     g.closePath();
     g.fill();
-    g.fillStyle = '#979ea4';
+    g.fillStyle = k.body;
     g.beginPath();
     roundRectPath(g, 12, 5, 38, 12, 3);
     g.fill();
-    g.fillStyle = '#c6ccd1';
+    g.fillStyle = k.light;
     g.fillRect(14, 6.5, 34, 3);
-    g.fillStyle = '#5b6166';
+    g.fillStyle = k.band;
     g.fillRect(44, 5, 3, 12);
     // ogiva
-    g.fillStyle = '#ecebe6';
+    g.fillStyle = k.nose;
     g.beginPath();
     g.moveTo(14, 5);
     g.quadraticCurveTo(0, 6, 1, 11);
     g.quadraticCurveTo(0, 16, 14, 17);
     g.closePath();
     g.fill();
-    g.fillStyle = '#c4302b';
+    g.fillStyle = k.tip;
     g.beginPath();
     g.arc(3.5, 11, 2.5, 0, Math.PI * 2);
     g.fill();
@@ -660,6 +603,8 @@ export function buildSprites(seed = 1234) {
   S.mountains.push(mountainSnowy(rng));
   for (let i = 0; i < 2; i++) S.hills.push(hill(rng));
   for (let i = 0; i < 6; i++) S.clouds.push(skyCloud(rng));
+  S.decor = buildDecor(rng, S);
+  S.foes = buildFoes(rng, S);
   return S;
 }
 
@@ -667,18 +612,58 @@ export function buildSprites(seed = 1234) {
 
 const OUT = '#1d1d1f';
 
-function leg(ctx, x, y, ang) {
+/** Variações de roupa do personagem conforme a época. */
+const LOOKS = {
+  default: {
+    pants: '#2f63b9',
+    shirt: '#f4f4f4',
+    shirtShade: '#d7d9dc',
+    belt: '#26467f',
+    out: OUT,
+    cap: '#1b1b1d',
+    gun: '#202022',
+    capDot: '#e6e6e6',
+    shoe: '#262628',
+    glow: null,
+  },
+  tron: {
+    pants: '#0b1724',
+    shirt: '#0e1c2c',
+    shirtShade: '#0a1420',
+    belt: '#00e5ff',
+    out: '#00e5ff',
+    cap: '#0b1724',
+    gun: '#0a1420',
+    capDot: '#00e5ff',
+    shoe: '#05090f',
+    glow: '#00e5ff',
+  },
+  apoc: {
+    pants: '#4a5560',
+    shirt: '#c9bb9c',
+    shirtShade: '#a5977a',
+    belt: '#5a3a20',
+    out: OUT,
+    cap: '#3a2a20',
+    gun: '#2a2622',
+    capDot: '#9a8a70',
+    shoe: '#2a2420',
+    glow: null,
+  },
+};
+
+function leg(ctx, x, y, ang, c) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(ang);
-  ctx.fillStyle = '#2f63b9';
-  ctx.strokeStyle = OUT;
+  ctx.fillStyle = c.pants;
+  ctx.strokeStyle = c.out;
   ctx.lineWidth = 1.6;
   ctx.beginPath();
   roundRectPath(ctx, -3.2, -1, 6.4, 13, 3);
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = '#262628';
+  ctx.fillStyle = c.shoe;
   ctx.beginPath();
   ctx.ellipse(1.8, 13.2, 4.6, 2.8, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -687,9 +672,11 @@ function leg(ctx, x, y, ang) {
 
 /**
  * Desenha o personagem com os pés em (0,0), olhando para +x.
- * st: { phase, air, stopped, flash, blink }
+ * st: { phase, air, stopped, blink, look }
  */
 export function drawPlayer(ctx, st) {
+  const c = LOOKS[st.look] || LOOKS.default;
+  const OUT = c.out;
   const run = !st.air && !st.stopped;
   const bob = run ? Math.abs(Math.sin(st.phase)) * 1.8 : 0;
   let a1;
@@ -708,9 +695,13 @@ export function drawPlayer(ctx, st) {
   ctx.translate(0, -bob);
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
+  if (c.glow) {
+    ctx.shadowColor = c.glow;
+    ctx.shadowBlur = 6;
+  }
 
   // perna de trás
-  leg(ctx, -1.5, -14.5, a2);
+  leg(ctx, -1.5, -14.5, a2, c);
 
   // braço de trás
   ctx.fillStyle = '#e9c35c';
@@ -721,26 +712,26 @@ export function drawPlayer(ctx, st) {
   ctx.fill();
   ctx.stroke();
 
-  // tronco (camiseta branca)
-  ctx.fillStyle = '#f4f4f4';
+  // tronco (camiseta)
+  ctx.fillStyle = c.shirt;
   ctx.strokeStyle = OUT;
   ctx.lineWidth = 1.7;
   ctx.beginPath();
   roundRectPath(ctx, -7.5, -30, 15, 17, 4.5);
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = '#d7d9dc';
+  ctx.fillStyle = c.shirtShade;
   ctx.beginPath();
   roundRectPath(ctx, -6.6, -29, 5, 15, 3);
   ctx.fill();
-  ctx.fillStyle = '#26467f';
+  ctx.fillStyle = c.belt;
   ctx.fillRect(-6.6, -16.5, 13.2, 3);
 
   // perna da frente
-  leg(ctx, 1.8, -14.5, a1);
+  leg(ctx, 1.8, -14.5, a1, c);
 
   // arma
-  ctx.fillStyle = '#202022';
+  ctx.fillStyle = c.gun;
   ctx.beginPath();
   roundRectPath(ctx, 2, -27.5, 16, 5.6, 1.6);
   ctx.fill();
@@ -749,7 +740,7 @@ export function drawPlayer(ctx, st) {
   ctx.fillRect(-1, -27, 4, 4.4);
 
   // braço da frente e mãos
-  ctx.fillStyle = '#f4f4f4';
+  ctx.fillStyle = c.shirt;
   ctx.strokeStyle = OUT;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -793,7 +784,7 @@ export function drawPlayer(ctx, st) {
   ctx.stroke();
 
   // boné virado para trás
-  ctx.fillStyle = '#1b1b1d';
+  ctx.fillStyle = c.cap;
   ctx.beginPath();
   ctx.arc(1, -40.5, 12.6, Math.PI * 1.03, Math.PI * 1.97);
   ctx.closePath();
@@ -801,7 +792,7 @@ export function drawPlayer(ctx, st) {
   ctx.beginPath();
   roundRectPath(ctx, -15.5, -44.2, 9.5, 3.8, 1.8);
   ctx.fill();
-  ctx.fillStyle = '#e6e6e6';
+  ctx.fillStyle = c.capDot;
   ctx.beginPath();
   ctx.arc(3.5, -48.4, 1.6, 0, Math.PI * 2);
   ctx.fill();

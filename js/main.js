@@ -8,6 +8,7 @@ import { Input } from './input.js';
 import { Sound } from './audio.js';
 import { store, loadRanking, saveScore } from './storage.js';
 import { clamp } from './utils.js';
+import { ERAS, mixAudio } from './eras.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -20,6 +21,7 @@ const overlay = post.handlesFilters ? document.createElement('canvas') : null;
 const octx = overlay ? overlay.getContext('2d') : null;
 
 const sound = new Sound();
+sound.prefetch('assets/audio/mundo-pequeno.mp3');
 const input = new Input();
 input.bindKeyboard(window);
 input.enabled = false;
@@ -43,6 +45,7 @@ const ui = {
   btnSound: $('#btn-sound'),
   btnInstall: $('#btn-install'),
   toast: $('#toast'),
+  eraCaption: $('#era-caption'),
   screens: {
     menu: $('#screen-menu'),
     controls: $('#screen-controls'),
@@ -64,9 +67,42 @@ const app = {
 const game = new Game(sprites, {
   sfx: (n) => sound.play(n),
   onHud: (h) => updateHud(h),
-  onLevel: (_lvl, look) => sound.setLook(look),
+  onEra: (i) => showEra(i),
+  onStop: (on) => vibrate(on),
   onGameOver: (seconds) => showGameOver(seconds),
 });
+
+// ------------------------------------------------------------------ Épocas
+
+let captionTimer = 0;
+function showEra(i) {
+  const era = ERAS[i];
+  stage.dataset.era = era.id;
+  ui.eraCaption.textContent = era.label;
+  ui.eraCaption.classList.remove('show');
+  void ui.eraCaption.offsetWidth;
+  ui.eraCaption.classList.add('show');
+  clearTimeout(captionTimer);
+  captionTimer = setTimeout(() => ui.eraCaption.classList.remove('show'), 2600);
+}
+
+/** Vibração do aparelho (celulares Android) enquanto o personagem está parado. */
+function vibrate(on) {
+  if (!app.isTouch || !navigator.vibrate || sound.muted) return;
+  try {
+    if (on) navigator.vibrate([40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30]);
+    else navigator.vibrate(0);
+  } catch {
+    /* sem suporte */
+  }
+}
+
+function startMusicOnce() {
+  sound.unlock();
+  sound.startMusic();
+}
+window.addEventListener('pointerdown', startMusicOnce, { once: true });
+window.addEventListener('keydown', startMusicOnce, { once: true });
 
 // ------------------------------------------------------------------ Layout
 
@@ -81,8 +117,9 @@ function layout() {
   stage.style.height = `${cssH}px`;
   stage.style.setProperty('--u', `${scale}px`);
 
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const outScale = Math.min(1, 2560 / (cssW * dpr));
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  const outScale = Math.min(1, 1920 / (cssW * dpr));
+  app.view.dpr = dpr * outScale;
   post.canvas.width = Math.max(2, Math.round(cssW * dpr * outScale));
   post.canvas.height = Math.max(2, Math.round(cssH * dpr * outScale));
 
@@ -147,7 +184,6 @@ async function startGame() {
   store.set('name', app.name);
   ui.hudName.textContent = app.name;
   sound.unlock();
-  sound.setLook('color');
   sound.startMusic();
   if (app.isTouch) await enterFullscreen();
   game.startRun(app.name);
@@ -169,7 +205,8 @@ function resumeGame() {
 function toMenu() {
   if (game.mode !== 'attract') game.enterAttract();
   sound.resume();
-  sound.setLook('color');
+  vibrate(false);
+  delete stage.dataset.era;
   showScreen('menu');
 }
 
@@ -184,7 +221,8 @@ function showGameOver(seconds) {
   ui.overNew.hidden = !(seconds > best && seconds > 0);
   renderRanking(list);
   game.enterAttract();
-  sound.setLook('color');
+  vibrate(false);
+  delete stage.dataset.era;
   showScreen('over');
 }
 
@@ -369,14 +407,18 @@ function frame(now) {
   const play = game.mode === 'play';
   post.render(scene, {
     overlay,
-    filters: game.filters,
+    fx: game.postParams(),
+    dt: paused ? 0 : dt,
+    dpr: v.dpr || 1,
+    lowQuality: v.quality < 0.8,
     aspect: v.lw / VIEW_H,
     overscan: OVERSCAN,
     lens: play,
     blur: play ? POST.blur * v.renderScale : 0,
-    vignette: play ? POST.vignette : 0.45,
     flash: [1, 0.96, 0.85, Math.min(0.85, game.flash)],
   });
+  const W = game.world;
+  sound.setProfile(play ? mixAudio(ERAS[W.from].audio, ERAS[W.to].audio, W.mix) : ERAS[3].audio);
 
   // ajuste automático de qualidade se o aparelho estiver lento
   if (app.screen === 'playing') {
