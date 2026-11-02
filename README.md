@@ -15,6 +15,17 @@ Esta é uma recriação para a web (PWA) do protótipo original feito no Constru
 
 Também funciona com controle (gamepad): A pula, B para, X atira, Start pausa.
 
+### No celular e no tablet
+
+O jogo se adapta ao tamanho e à orientação da tela, no computador e no celular:
+
+- **Na horizontal** a tela tem a mesma composição do jogo original.
+- **Na vertical** o menu, as telas de texto e o painel se reorganizam em coluna, e a câmera do jogo se afasta um pouco para mostrar mais do mundo.
+- **Botões virtuais** aparecem quando o aparelho tem tela de toque: **Pular** à direita e **Atirar** e **Parar** à esquerda. Tocar em qualquer ponto livre da metade direita também pula, e dá para deslizar o dedo de um botão para outro (de Atirar para Parar, por exemplo) sem levantar.
+- Os botões respeitam as áreas seguras da tela (entalhe e barra de gestos do iPhone).
+- Em aparelhos com tela de toque e teclado, os botões somem quando você usa o teclado e voltam no próximo toque.
+- No Android, o jogo entra em tela cheia ao começar. No iPhone, para jogar em tela cheia, adicione à tela de início (Compartilhar, depois "Adicionar à Tela de Início").
+
 ### Mecânicas
 
 - **Corrida automática**: o mundo gira sob o personagem o tempo todo.
@@ -103,7 +114,11 @@ node tools/generate-icons.cjs
 node tools/smoke-test.cjs
 ```
 
-O primeiro gera os ícones PNG a partir de `tools/icon.html`. O segundo abre o jogo, passa por todas as telas e por todas as épocas, captura uma transição, verifica erros no console e salva capturas em `screenshots/`.
+```bash
+node tools/responsive-test.cjs
+```
+
+O primeiro gera os ícones PNG a partir de `tools/icon.html`. O segundo abre o jogo, passa por todas as telas e por todas as épocas, captura uma transição, verifica erros no console e salva capturas em `screenshots/`. O terceiro abre o jogo em vários tamanhos de tela (desktop, janela estreita, celulares em pé e deitados, tablet), confere se algo sai da área visível e testa os toques.
 
 ## O que foi deduzido dos vídeos
 

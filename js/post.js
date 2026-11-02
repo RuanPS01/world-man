@@ -47,6 +47,9 @@ uniform float uDust;
 uniform float uTime;
 uniform vec2 uJitter;
 uniform vec4 uScratch;
+uniform float uNorm;  // menor lado da tela (1 em paisagem; a proporção em retrato)
+uniform float uVigY;  // achata a vinheta na vertical em retrato
+uniform float uR2Max; // limita a lente para não amostrar fora da cena
 
 vec3 tap(vec2 uv) { return texture2D(uTex, uv).rgb; }
 
@@ -58,17 +61,19 @@ float hash(vec2 p) {
 
 void main() {
   vec2 p = (vUv - 0.5) * vec2(uAspect, 1.0);
-  float r2 = dot(p, p);
+  float r2 = min(dot(p, p) / (uNorm * uNorm), uR2Max);
   vec2 sp = p * (uS0 + uK * r2);
   vec2 uv = 0.5 + sp / (vec2(uAspect, 1.0) * uOver) + uJitter;
   uv = clamp(uv, uTexel, 1.0 - uTexel);
+  vec2 vq = vec2(p.x / uNorm, p.y / (uNorm * uVigY));
+  float vr2 = dot(vq, vq);
 
   // desfoque nas bordas
-  float edge = smoothstep(0.16, 0.95, r2);
+  float edge = smoothstep(0.16, 0.95, vr2);
   vec2 d = uTexel * uBlur * edge;
   vec3 c0 = tap(uv);
   if (uChroma > 0.001) {
-    vec2 ca = vec2(uTexel.x * 2.6 * uChroma * (0.5 + r2), 0.0);
+    vec2 ca = vec2(uTexel.x * 2.6 * uChroma * (0.5 + vr2), 0.0);
     c0.r = mix(c0.r, tap(uv + ca).r, 0.9);
     c0.b = mix(c0.b, tap(uv - ca).b, 0.9);
   }
@@ -142,7 +147,7 @@ void main() {
     col += g * uGrain;
   }
 
-  float v = smoothstep(0.22, 1.08, sqrt(r2) * 1.04);
+  float v = smoothstep(0.22, 1.08, sqrt(vr2) * 1.04);
   col = mix(col, uVigColor, clamp(v * uVig, 0.0, 1.0));
   col = mix(col, uFlash.rgb, uFlash.a);
   gl_FragColor = vec4(col, 1.0);
@@ -151,7 +156,7 @@ void main() {
 const UNIFORMS = [
   'uTex', 'uOverTex', 'uUseOver', 'uAspect', 'uOver', 'uS0', 'uK', 'uBlur', 'uVig', 'uTexel', 'uFlash', 'uVigColor', 'uTint',
   'uGray', 'uSepia', 'uGrain', 'uScan', 'uScanPeriod', 'uChroma', 'uCrt', 'uBloom', 'uSat', 'uContrast', 'uBright', 'uDust',
-  'uTime', 'uJitter', 'uScratch',
+  'uTime', 'uJitter', 'uScratch', 'uNorm', 'uVigY', 'uR2Max',
 ];
 
 function compile(gl, type, src) {
@@ -266,6 +271,10 @@ class GLPost {
     if (o.overlay) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, o.overlay);
     gl.uniform1f(u.uUseOver, o.overlay ? 1 : 0);
     gl.uniform1f(u.uAspect, o.aspect);
+    const norm = Math.min(o.aspect, 1);
+    gl.uniform1f(u.uNorm, norm);
+    gl.uniform1f(u.uVigY, o.aspect < 1 ? 0.56 / o.aspect : 1);
+    gl.uniform1f(u.uR2Max, o.aspect < 1 ? 0.85 : 1.25);
     gl.uniform1f(u.uOver, o.overscan);
     gl.uniform1f(u.uS0, o.lens ? POST.s0 : 1);
     gl.uniform1f(u.uK, o.lens ? POST.k : 0);

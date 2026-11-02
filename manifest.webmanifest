@@ -8,7 +8,7 @@
   "scope": "./",
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone"],
-  "orientation": "landscape",
+  "orientation": "any",
   "background_color": "#2b6c88",
   "theme_color": "#2b6072",
   "categories": ["games", "entertainment"],

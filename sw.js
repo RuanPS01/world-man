@@ -1,7 +1,7 @@
 // Service worker do WorldMan: guarda todos os arquivos para jogar offline.
 // Ao mudar qualquer arquivo do jogo, aumente a versão abaixo.
 
-const VERSION = 'worldman-v2.0.0';
+const VERSION = 'worldman-v2.1.0';
 
 const ASSETS = [
   './',

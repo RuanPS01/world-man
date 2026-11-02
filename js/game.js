@@ -75,7 +75,29 @@ export class Game {
     this.runOmega = PLAYER.runSpeed / R;
     this.level = 0;
     this.era = 0;
+    this.viewport = { w: 1280, h: 720, portrait: false };
     this.enterAttract();
+  }
+
+  /** Recebe o tamanho do mundo visível (muda entre paisagem e retrato). */
+  setViewport(v) {
+    this.viewport = { ...v };
+    this.applyCameraLayout();
+  }
+
+  /** Posição da câmera conforme o modo e a orientação da tela. */
+  applyCameraLayout() {
+    const cam = this.cam;
+    if (!cam) return;
+    const { h, portrait } = this.viewport;
+    if (this.mode === 'play') {
+      cam.zoom = 1;
+      cam.anchorY = portrait ? h * 0.07 : 6;
+    } else {
+      cam.zoom = portrait ? 0.34 : 0.38;
+      cam.anchorY = portrait ? h * 0.16 : 250;
+      cam.focusR = 1400;
+    }
   }
 
   sfx(name) {
@@ -97,6 +119,7 @@ export class Game {
     this.particles = [];
     this.enemies = [];
     this.cam = { angle: rand(0, TAU), lift: 0, roll: 0, shake: 0, hold: 0, zoom: 0.38, anchorY: 250, focusR: 1400 };
+    this.applyCameraLayout();
     for (let i = 0; i < 3; i++) {
       const b = new Floater(this, this.cam.angle - 0.6 + i * 0.6 + rand(-0.15, 0.15), FOES.balloon);
       b.alt = rand(260, 480);
@@ -144,6 +167,7 @@ export class Game {
       noStopsT: 0,
     };
     this.cam = { angle: a0, lift: 0, roll: 0, shake: 0, hold: 0, zoom: 1, anchorY: 6 };
+    this.applyCameraLayout();
     this.world.update(0, a0);
     this.hands = [];
     // primeiro ponteiro chega perto dos 4,5 s

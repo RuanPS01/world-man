@@ -59,6 +59,9 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  -webkit-touch-callout: none;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
   background: #0f3a52;
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
@@ -686,8 +689,8 @@ input:focus-visible {
 
 .tools {
   position: absolute;
-  top: calc(var(--u) * 16);
-  right: calc(var(--u) * 16);
+  top: calc(var(--u) * 16 + env(safe-area-inset-top, 0px));
+  right: calc(var(--u) * 16 + env(safe-area-inset-right, 0px));
   display: flex;
   gap: calc(var(--u) * 10);
   z-index: 5;
@@ -696,6 +699,8 @@ input:focus-visible {
 .icon-btn {
   width: calc(var(--u) * 46);
   height: calc(var(--u) * 46);
+  min-width: 32px;
+  min-height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -704,6 +709,13 @@ input:focus-visible {
   border-radius: calc(var(--u) * 12);
   background: rgba(36, 50, 56, 0.55);
   color: var(--gold);
+}
+
+.is-touch .icon-btn {
+  width: calc(var(--u) * 70);
+  height: calc(var(--u) * 70);
+  min-width: 40px;
+  min-height: 40px;
 }
 
 .icon-btn svg {
@@ -733,16 +745,22 @@ input:focus-visible {
 
 /* ------------------------------------------------------------- Toque */
 
+/* A camada inteira recebe os dedos; os botões são só o desenho. */
 .touch {
   position: absolute;
   inset: 0;
-  pointer-events: none;
   z-index: 4;
+  touch-action: none;
+  -webkit-touch-callout: none;
+}
+
+#stage.kbd .touch {
+  display: none;
 }
 
 .tbtn {
   position: absolute;
-  pointer-events: auto;
+  pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -750,13 +768,13 @@ input:focus-visible {
   gap: calc(var(--u) * 2);
   border: calc(var(--u) * 4) solid rgba(246, 179, 0, 0.85);
   border-radius: 50%;
-  background: rgba(36, 50, 56, 0.38);
+  background: rgba(36, 50, 56, 0.36);
   color: #ffd24a;
   font-family: var(--cinzel);
   font-weight: 900;
-  font-size: calc(var(--u) * 17);
-  touch-action: none;
-  -webkit-touch-callout: none;
+  font-size: calc(var(--u) * 18);
+  box-shadow: 0 calc(var(--u) * 4) calc(var(--u) * 10) rgba(0, 0, 0, 0.25);
+  transition: transform 0.06s ease, background 0.06s ease;
 }
 
 .tbtn svg {
@@ -766,30 +784,50 @@ input:focus-visible {
 }
 
 .tbtn.is-down {
-  background: rgba(246, 179, 0, 0.42);
+  background: rgba(246, 179, 0, 0.45);
   color: #fff6c8;
-  transform: scale(0.95);
+  transform: scale(0.93);
+}
+
+/* Atirar e Parar à esquerda, Pular à direita. Os tamanhos acompanham a tela,
+   mas têm limite em pixels para não ficarem enormes em tablets. */
+.touch {
+  --pad: min(calc(var(--u) * 36), 28px);
+  --lift: 0px;
+  --bs: min(calc(var(--u) * 160), 120px);
+  --bp: min(calc(var(--u) * 118), 88px);
+  --bj: min(calc(var(--u) * 190), 140px);
+}
+#stage.portrait .touch {
+  --pad: min(calc(var(--u) * 34), 28px);
+  --lift: min(calc(var(--u) * 60), 48px);
+  --bs: min(calc(var(--u) * 200), 130px);
+  --bp: min(calc(var(--u) * 150), 96px);
+  --bj: min(calc(var(--u) * 230), 150px);
+}
+
+.tbtn-shoot {
+  left: calc(var(--pad) + env(safe-area-inset-left, 0px));
+  bottom: calc(var(--pad) + var(--lift) + env(safe-area-inset-bottom, 0px));
+  width: var(--bs);
+  height: var(--bs);
+  font-size: calc(var(--bs) * 0.115);
 }
 
 .tbtn-stop {
-  left: calc(var(--u) * 34);
-  bottom: calc(var(--u) * 34);
-  width: calc(var(--u) * 150);
-  height: calc(var(--u) * 150);
+  left: calc(var(--pad) + var(--bs) * 0.95 + env(safe-area-inset-left, 0px));
+  bottom: calc(var(--pad) + var(--lift) + var(--bs) * 0.68 + env(safe-area-inset-bottom, 0px));
+  width: var(--bp);
+  height: var(--bp);
+  font-size: calc(var(--bp) * 0.15);
 }
 
-.touch-right .tbtn-jump {
-  right: calc(var(--u) * 34);
-  bottom: calc(var(--u) * 34);
-  width: calc(var(--u) * 170);
-  height: calc(var(--u) * 170);
-}
-
-.touch-right .tbtn-shoot {
-  right: calc(var(--u) * 226);
-  bottom: calc(var(--u) * 50);
-  width: calc(var(--u) * 140);
-  height: calc(var(--u) * 140);
+.tbtn-jump {
+  right: calc(var(--pad) + env(safe-area-inset-right, 0px));
+  bottom: calc(var(--pad) + var(--lift) + env(safe-area-inset-bottom, 0px));
+  width: var(--bj);
+  height: var(--bj);
+  font-size: calc(var(--bj) * 0.11);
 }
 
 #screen-controls .band {
@@ -943,29 +981,6 @@ input:focus-visible {
   transform: translate(-50%, 0);
 }
 
-.rotate-hint {
-  display: none;
-}
-
-@media (orientation: portrait) {
-  .is-touch .rotate-hint {
-    display: block;
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: 0;
-    padding: 14px 16px calc(14px + env(safe-area-inset-top));
-    padding-top: calc(14px + env(safe-area-inset-top));
-    background: rgba(36, 50, 56, 0.92);
-    color: #f6d36b;
-    font-family: var(--serif);
-    font-weight: 600;
-    font-size: 17px;
-    text-align: center;
-    z-index: 20;
-  }
-}
-
 .noscript {
   color: #fff;
   font-family: var(--serif);
@@ -979,4 +994,395 @@ input:focus-visible {
   .hud-line.no-stops {
     animation: none;
   }
+}
+
+/* ============================================================= Celular e retrato
+   Em retrato o espaço de design tem 720 unidades de largura (--u = largura/720)
+   e a altura varia (--dh). As telas com faixa viram uma coluna centralizada. */
+
+.portrait-tip {
+  display: none;
+}
+
+/* instruções do aparelho em uso: teclas no computador, botões no celular */
+.only-touch {
+  display: none !important;
+}
+.is-touch .only-touch {
+  display: inline-flex !important;
+}
+.is-touch span.only-touch:not(.tkey) {
+  display: inline !important;
+}
+.is-touch .only-keys {
+  display: none !important;
+}
+
+.tkey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--u) * 34);
+  height: calc(var(--u) * 34);
+  border: calc(var(--u) * 2.5) solid var(--gold);
+  border-radius: 50%;
+  color: var(--gold);
+}
+.tkey svg {
+  width: 62%;
+  height: 62%;
+  fill: currentColor;
+}
+.tkey svg .stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+}
+#stage.portrait .tkey {
+  width: calc(var(--u) * 48);
+  height: calc(var(--u) * 48);
+}
+
+/* ---- telas pequenas em paisagem (celular deitado): textos miúdos ficam maiores */
+#stage.compact .ranking {
+  font-size: calc(var(--u) * 25);
+}
+#stage.compact .obs-small {
+  font-size: calc(var(--u) * 21);
+}
+#stage.compact .small-btn {
+  height: calc(var(--u) * 52);
+  font-size: calc(var(--u) * 30);
+}
+#stage.compact .toast {
+  font-size: calc(var(--u) * 30);
+}
+
+/* iOS amplia a página ao focar campos com fonte menor que 16px */
+.is-touch .np-input input {
+  font-size: max(16px, calc(var(--u) * 18));
+}
+
+/* ---- retrato */
+#stage.portrait .frame {
+  width: calc(var(--u) * 720);
+}
+
+/* menu: bloco de 720 x 1180 centralizado (encolhe se a tela for baixa) */
+#stage.portrait .screen-menu .frame {
+  top: 50%;
+  height: calc(var(--u) * 1180);
+  transform: translate(-50%, -50%) scale(min(1, calc(var(--dh) / 1200)));
+}
+#stage.portrait .logo {
+  top: calc(var(--u) * 20);
+  font-size: calc(var(--u) * 82);
+}
+#stage.portrait .ribbon .face {
+  clip-path: polygon(4.5% 0, 100% 0, 95.5% 100%, 0 100%);
+  padding-right: 4%;
+}
+#stage.portrait .r1 {
+  left: calc(var(--u) * 70);
+  top: calc(var(--u) * 196);
+  width: calc(var(--u) * 580);
+  height: calc(var(--u) * 106);
+  font-size: calc(var(--u) * 58);
+}
+#stage.portrait .r1 .fold {
+  left: calc(var(--u) * -40);
+  top: calc(var(--u) * 54);
+  width: calc(var(--u) * 170);
+  height: calc(var(--u) * 100);
+}
+#stage.portrait .r2 {
+  left: calc(var(--u) * 100);
+  top: calc(var(--u) * 346);
+  width: calc(var(--u) * 520);
+  height: calc(var(--u) * 92);
+  font-size: calc(var(--u) * 48);
+}
+#stage.portrait .r2 .fold {
+  left: calc(var(--u) * -38);
+  top: calc(var(--u) * 46);
+  width: calc(var(--u) * 160);
+  height: calc(var(--u) * 88);
+}
+#stage.portrait .r3 {
+  left: calc(var(--u) * 130);
+  top: calc(var(--u) * 482);
+  width: calc(var(--u) * 460);
+  height: calc(var(--u) * 92);
+  font-size: calc(var(--u) * 48);
+}
+#stage.portrait .r3 .fold {
+  left: calc(var(--u) * -34);
+  top: calc(var(--u) * 46);
+  width: calc(var(--u) * 150);
+  height: calc(var(--u) * 88);
+}
+#stage.portrait .name-panel {
+  left: calc(var(--u) * 60);
+  top: calc(var(--u) * 646);
+  width: calc(var(--u) * 600);
+  height: calc(var(--u) * 400);
+}
+#stage.portrait .np-title {
+  width: calc(var(--u) * 520);
+  font-size: calc(var(--u) * 40);
+}
+#stage.portrait .np-input {
+  top: calc(var(--u) * 140);
+  width: calc(var(--u) * 522);
+  height: calc(var(--u) * 84);
+}
+#stage.portrait .np-input input {
+  font-size: max(16px, calc(var(--u) * 28));
+}
+#stage.portrait .np-install {
+  top: calc(var(--u) * 250);
+}
+#stage.portrait .np-version {
+  font-size: calc(var(--u) * 36);
+}
+#stage.portrait .portrait-tip {
+  position: absolute;
+  left: calc(var(--u) * 60);
+  right: calc(var(--u) * 60);
+  top: calc(var(--u) * 1076);
+  margin: 0;
+  text-align: center;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: calc(var(--u) * 26);
+  color: #fff6d6;
+  text-shadow: 0 calc(var(--u) * 2) calc(var(--u) * 4) rgba(0, 0, 0, 0.55);
+}
+.is-touch #stage.portrait .portrait-tip {
+  display: block;
+}
+
+/* faixas (controles, créditos, fim de jogo, pausa) em coluna */
+#stage.portrait .screen-band {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  gap: calc(var(--u) * 34);
+  padding: calc(var(--u) * 30 + env(safe-area-inset-top, 0px)) 0 calc(var(--u) * 30 + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+}
+#stage.portrait .band,
+#stage.portrait #screen-controls .band {
+  position: relative;
+  top: auto;
+  height: auto;
+  flex: none;
+}
+#stage.portrait .band-inner {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: auto;
+  height: auto;
+  transform: none;
+  padding: calc(var(--u) * 38) calc(var(--u) * 46) calc(var(--u) * 40);
+}
+#stage.portrait .band-title {
+  font-size: calc(var(--u) * 66);
+  margin-bottom: calc(var(--u) * 18);
+}
+#stage.portrait .controls-list {
+  font-size: calc(var(--u) * 38);
+  margin-bottom: calc(var(--u) * 24);
+}
+#stage.portrait .controls-list li {
+  gap: calc(var(--u) * 16);
+}
+#stage.portrait .key {
+  width: calc(var(--u) * 42);
+  height: calc(var(--u) * 40);
+}
+#stage.portrait .key-letter {
+  font-size: calc(var(--u) * 28);
+}
+#stage.portrait .credits-list {
+  font-size: calc(var(--u) * 32);
+  line-height: 1.4;
+  margin: 0;
+}
+#stage.portrait .credits-list li + li {
+  margin-top: calc(var(--u) * 14);
+}
+#stage.portrait .obs {
+  font-size: calc(var(--u) * 29);
+  max-width: none;
+}
+#stage.portrait .obs-small {
+  font-size: calc(var(--u) * 25);
+  margin-top: calc(var(--u) * 16);
+}
+#stage.portrait .band-buttons {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: auto;
+  height: auto;
+  transform: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--u) * 22);
+}
+#stage.portrait .gold-btn,
+#stage.portrait #screen-controls .gold-btn,
+#stage.portrait .band-buttons.two .gold-btn,
+#stage.portrait .band-buttons.two .gold-btn:first-child,
+#stage.portrait .band-buttons.two .gold-btn:last-child {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: calc(var(--u) * 460);
+  height: calc(var(--u) * 100);
+  font-size: calc(var(--u) * 46);
+}
+#stage.portrait .band-buttons.two .gold-btn:last-child {
+  font-size: calc(var(--u) * 38);
+}
+
+/* fim de jogo em retrato */
+#stage.portrait .band-over {
+  top: auto;
+  height: auto;
+}
+#stage.portrait .over-inner {
+  padding: calc(var(--u) * 36) calc(var(--u) * 46) calc(var(--u) * 36);
+}
+#stage.portrait .over-title {
+  font-size: calc(var(--u) * 46);
+}
+#stage.portrait .over-new {
+  position: static;
+  display: inline-block;
+  margin-top: calc(var(--u) * 12);
+  font-size: calc(var(--u) * 26);
+}
+#stage.portrait .ranking {
+  margin-top: calc(var(--u) * 18);
+  font-size: calc(var(--u) * 32);
+  line-height: 1.15;
+}
+#stage.portrait .over-actions {
+  position: static;
+  justify-content: flex-end;
+  margin-top: calc(var(--u) * 26);
+  gap: calc(var(--u) * 20);
+}
+#stage.portrait .small-btn {
+  min-width: calc(var(--u) * 200);
+  height: calc(var(--u) * 66);
+  font-size: calc(var(--u) * 34);
+}
+
+/* painel e legenda em retrato */
+#stage.portrait .hud-panel {
+  top: calc(var(--u) * 34 + env(safe-area-inset-top, 0px));
+  min-width: calc(var(--u) * 380);
+  padding: calc(var(--u) * 12) calc(var(--u) * 30) calc(var(--u) * 16);
+}
+#stage.portrait .hud-name {
+  font-size: calc(var(--u) * 36);
+}
+#stage.portrait .hud-line {
+  font-size: calc(var(--u) * 46);
+}
+#stage.portrait .hud-stop {
+  font-size: calc(var(--u) * 38);
+}
+#stage.portrait .era-caption {
+  top: calc(var(--u) * 268 + env(safe-area-inset-top, 0px));
+  font-size: calc(var(--u) * 48);
+}
+#stage.portrait .tools {
+  top: calc(var(--u) * 20 + env(safe-area-inset-top, 0px));
+}
+#stage.portrait .icon-btn {
+  width: calc(var(--u) * 76);
+  height: calc(var(--u) * 76);
+}
+#stage.portrait .toast {
+  font-size: calc(var(--u) * 32);
+  bottom: calc(var(--u) * 60 + env(safe-area-inset-bottom, 0px));
+}
+
+
+/* em retrato os botões de ferramenta ficam em coluna na borda, sem cobrir o painel */
+#stage.portrait .tools {
+  flex-direction: column;
+}
+
+/* ---- telas baixas em paisagem (celular deitado): faixas com altura do conteúdo */
+#stage.compact:not(.portrait) .screen-band {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(var(--u) * 20);
+  padding: calc(var(--u) * 14) 0;
+  overflow-y: auto;
+}
+#stage.compact:not(.portrait) .band,
+#stage.compact:not(.portrait) #screen-controls .band,
+#stage.compact:not(.portrait) .band-over {
+  position: relative;
+  top: auto;
+  height: auto;
+  flex: none;
+}
+#stage.compact:not(.portrait) .band-inner {
+  position: relative;
+  left: auto;
+  top: auto;
+  height: auto;
+  transform: none;
+  margin: 0 auto;
+  padding-bottom: calc(var(--u) * 24);
+}
+#stage.compact:not(.portrait) .over-actions {
+  position: static;
+  justify-content: flex-end;
+  margin-top: calc(var(--u) * 14);
+}
+#stage.compact:not(.portrait) .band-buttons {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: auto;
+  height: auto;
+  transform: none;
+  display: flex;
+  justify-content: center;
+  gap: calc(var(--u) * 70);
+  flex: none;
+}
+#stage.compact:not(.portrait) .gold-btn,
+#stage.compact:not(.portrait) #screen-controls .gold-btn,
+#stage.compact:not(.portrait) .band-buttons.two .gold-btn:first-child,
+#stage.compact:not(.portrait) .band-buttons.two .gold-btn:last-child {
+  position: relative;
+  left: auto;
+  top: auto;
+}
+
+/* centraliza quando cabe; quando não cabe, começa no topo e rola (sem cortar o título) */
+#stage.portrait .screen-band,
+#stage.compact:not(.portrait) .screen-band {
+  justify-content: flex-start;
+}
+#stage.portrait .screen-band > :first-child,
+#stage.compact:not(.portrait) .screen-band > :first-child {
+  margin-top: auto;
+}
+#stage.portrait .screen-band > :last-child,
+#stage.compact:not(.portrait) .screen-band > :last-child {
+  margin-bottom: auto;
 }
