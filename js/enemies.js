@@ -24,8 +24,8 @@ export const FOES = {
   rocket: { arch: 'launcher', sprite: 'rocket', hp: 2, debris: ['#f4f4f2', '#d6322b', '#8e979c', '#5fb1c3'] },
   rustRocket: { arch: 'launcher', sprite: 'rustRocket', hp: 2, debris: ['#b8a48a', '#7a3a1a', '#3a3632'] },
   // rasantes: vêm de frente perto do chão (pule ou atire)
-  missile: { arch: 'skimmer', sprite: 'missile', hp: 1, radius: 15, lanes: [17, 47], speed: 0.2, flame: '#ffb22e', smoke: true, warn: true, size: 0.9, debris: ['#979ea4', '#ecebe6', '#4b5156'] },
-  neonMissile: { arch: 'skimmer', sprite: 'neonMissile', hp: 1, radius: 15, lanes: [17, 47], speed: 0.24, flame: '#ff3fd2', warn: true, size: 0.9, debris: ['#2a1a40', '#ff3fd2', '#33e1ff'] },
+  missile: { arch: 'skimmer', sprite: 'missile', hp: 1, radius: 15, lanes: [17], speed: 0.2, flame: '#ffb22e', smoke: true, warn: true, size: 0.9, debris: ['#979ea4', '#ecebe6', '#4b5156'] },
+  neonMissile: { arch: 'skimmer', sprite: 'neonMissile', hp: 1, radius: 15, lanes: [17], speed: 0.24, flame: '#ff3fd2', warn: true, size: 0.9, debris: ['#2a1a40', '#ff3fd2', '#33e1ff'] },
   disc: { arch: 'skimmer', sprite: 'disc', hp: 1, radius: 14, lanes: [16], speed: 0.3, spin: true, warn: true, size: 0.8, debris: ['#00e5ff', '#02060c'] },
   barrel: { arch: 'skimmer', sprite: 'barrel', hp: 2, radius: 15, lanes: [15], speed: 0.12, roll: true, size: 0.9, debris: ['#8a4a22', '#5a2e12', '#d8b02a'] },
   // caçadores: drones que descem até a altura da cabeça (atire!)
@@ -235,7 +235,7 @@ export class Rocket extends Enemy {
     this.state = 'idle';
     this.valt = 0;
     this.acc = rand(480, 560);
-    this.launchAt = game.level >= 1 && Math.random() < 0.5 ? rand(0.07, 0.14) : rand(0.2, 0.36);
+    this.launchAt = rand(0.26, 0.38);
     this.timer = 0;
     this.tilt = 0;
     this.tiltV = rand(-0.08, 0.08);
@@ -307,9 +307,9 @@ export class Rocket extends Enemy {
 // ---------------------------------------------------------------- Rasante
 
 export class Skimmer extends Enemy {
-  constructor(game, a, cfg, high = false) {
-    const lanes = cfg.lanes;
-    super(game, a, high && lanes.length > 1 ? lanes[1] : lanes[0], cfg);
+  constructor(game, a, cfg) {
+    // sempre rente ao chão, abaixo da cintura: um pulo sempre passa por cima
+    super(game, a, cfg.lanes[0], cfg);
     this.kind = 'skimmer';
     this.warn = !!cfg.warn;
     this.wa = -(cfg.speed + Math.min(game.level, 8) * 0.022);
@@ -400,10 +400,15 @@ export class Obstacle extends Enemy {
   }
   touchesPlayer() {
     const p = this.game.player;
-    return Math.abs(this.rel()) * R < this.cfg.half + 9 && p.h < this.cfg.height - 3;
+    return Math.abs(this.rel()) * R < this.cfg.half + 6 && p.h < this.cfg.height - 5;
   }
   draw(ctx) {
     this.frame(ctx, 0, () => {
+      // sombra de contato: separa o obstáculo do cenário do fundo
+      ctx.fillStyle = 'rgba(10,8,6,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(0, 1, this.cfg.half + 8, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
       if (this.cfg.pulse) ctx.globalAlpha = 0.75 + Math.sin(this.t * 9) * 0.25;
       drawSprite(ctx, this.spr, 0, 0);
       ctx.globalAlpha = 1;
@@ -477,28 +482,34 @@ export class Faller extends Enemy {
   }
 }
 
-/** Cria um inimigo do tipo pedido, posicionado em relação ao jogador. */
-export function spawnFoe(game, type, opts = {}) {
+/**
+ * Cria um inimigo do tipo pedido, posicionado em relação ao jogador.
+ * `minAhead` é o menor ângulo à frente que fica fora da tela: nada nasce
+ * dentro da área visível nem perto do jogador.
+ */
+export function spawnFoe(game, type, opts = {}, minAhead = 0.75) {
   const cfg = FOES[type];
   const p = game.player;
   if (!cfg) return null;
+  const ahead = (lo, hi) => p.a + Math.max(minAhead, lo) + rand(0, hi - lo);
   switch (cfg.arch) {
     case 'floater':
-      return new Floater(game, p.a + rand(0.72, 0.92), cfg, opts);
+      return new Floater(game, ahead(0.72, 0.92), cfg, opts);
     case 'flyer': {
       const front = Math.random() < 0.6;
-      return new Flyer(game, p.a + (front ? 0.95 : -0.95), cfg, opts, front);
+      return new Flyer(game, front ? ahead(0.95, 1.0) : p.a - Math.max(minAhead + 0.1, 0.95), cfg, opts, front);
     }
     case 'launcher':
-      return new Rocket(game, p.a + rand(0.66, 0.8), cfg);
+      return new Rocket(game, ahead(0.66, 0.8), cfg);
     case 'skimmer':
-      return new Skimmer(game, p.a + 1.02, cfg, game.level >= 2 && Math.random() < 0.35);
+      return new Skimmer(game, ahead(1.02, 1.06), cfg);
     case 'hunter':
-      return new Hunter(game, p.a + rand(0.95, 1.05), cfg);
+      return new Hunter(game, ahead(0.95, 1.05), cfg);
     case 'obstacle':
-      return new Obstacle(game, p.a + rand(0.78, 0.9), cfg);
+      return new Obstacle(game, ahead(0.78, 0.9), cfg);
     case 'meteor':
-      return new Faller(game, 'debris', p.a + rand(0.22, 0.5), 760, -160, rand(-0.02, 0.02));
+      // cai lá do alto, à frente; a sombra no chão mostra onde
+      return new Faller(game, 'debris', p.a + rand(0.24, 0.5), 760, -160, rand(-0.02, 0.02));
     default:
       return null;
   }
