@@ -68,13 +68,27 @@ Depois abra <http://localhost:8080>. Qualquer outro servidor estático também s
 python3 -m http.server 8080
 ```
 
-## Publicando (PWA)
+## Publicando no GitHub Pages
 
-O jogo é um site estático, então pode ser publicado em qualquer hospedagem com HTTPS (GitHub Pages, Netlify, Vercel, Cloudflare Pages). No GitHub Pages: em *Settings > Pages*, escolha *Deploy from a branch* e selecione a branch e a pasta raiz.
+A publicação é automática pelo GitHub Actions (`.github/workflows/pages.yml`):
 
-Depois de publicado, o navegador oferece "Instalar app" (o menu também mostra um botão **Instalar app** quando disponível). Instalado, o jogo abre em tela cheia, na horizontal, e funciona sem internet (a música também fica guardada).
+- **Push na `main`** (inclusive ao mesclar um pull request): verifica o jogo, monta a pasta do site e publica.
+- **Pull request para a `main`**: só verifica, sem publicar. Se algo estiver errado, o PR mostra a falha.
+- **Manual**: aba *Actions*, fluxo **Publicar no GitHub Pages**, botão *Run workflow* (a partir da `main`).
 
-Ao alterar arquivos do jogo, aumente a constante `VERSION` em `sw.js` para que os jogadores recebam a atualização.
+Antes da primeira publicação, uma configuração única no repositório: em *Settings > Pages > Build and deployment*, escolha **GitHub Actions** como *Source*. Depois disso o jogo fica em <https://ruanps01.github.io/world-man/> e o endereço também aparece no resumo de cada execução do fluxo.
+
+O que a pipeline faz:
+
+1. `node tools/check-site.mjs` confere a sintaxe de todos os scripts, os imports entre os módulos, o manifesto do PWA e os ícones. Também garante que todo arquivo do jogo está na lista do service worker (senão não funcionaria offline) e que não há caminhos absolutos, que quebrariam no endereço do GitHub Pages por ele ficar numa subpasta.
+2. `node tools/build-site.mjs _site` copia só os arquivos do jogo (sem ferramentas, testes e documentação) e acrescenta o commit à versão do service worker. Assim cada publicação chega aos jogadores sem precisar mudar `VERSION` à mão.
+3. As actions oficiais do GitHub enviam a pasta e publicam.
+
+Os dois scripts também rodam no computador, sem instalar nada.
+
+Depois de publicado, o navegador oferece "Instalar app" (o menu também mostra um botão **Instalar app** quando disponível). Instalado, o jogo abre em tela cheia e funciona sem internet (a música também fica guardada).
+
+Em outras hospedagens com HTTPS (Netlify, Vercel, Cloudflare Pages) basta publicar a pasta gerada por `node tools/build-site.mjs`.
 
 ## Estrutura
 
@@ -99,7 +113,8 @@ manifest.webmanifest    manifesto do PWA
 assets/audio            trilha "Mundo Pequeno"
 assets/fonts            Cinzel, Cinzel Decorative e Crimson Text (SIL OFL)
 assets/icons            ícones do app
-tools/                  servidor local, gerador de ícones e teste automatizado
+tools/                  servidor local, verificação e montagem do site, ícones e testes automatizados
+.github/workflows       publicação no GitHub Pages
 ```
 
 ## Ferramentas de desenvolvimento

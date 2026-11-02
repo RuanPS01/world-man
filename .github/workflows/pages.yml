@@ -1,0 +1,71 @@
+# Publica o WorldMan no GitHub Pages.
+#
+# - Em pull requests para a main: só verifica o jogo (nada é publicado).
+# - Em push na main ou ao rodar manualmente (aba Actions): verifica, monta a
+#   pasta do site e publica.
+#
+# Antes da primeira publicação, em Settings > Pages > Build and deployment,
+# escolha "GitHub Actions" como Source.
+
+name: Publicar no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Uma publicação por vez (sem cancelar a que está em andamento);
+# verificações de pull request antigas são canceladas quando chega um commit novo.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('verificar-{0}', github.ref) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Verificar e montar o site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v6
+
+      - name: Preparar o Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Verificar o jogo
+        run: node tools/check-site.mjs
+
+      - name: Montar a pasta do site
+        run: node tools/build-site.mjs _site
+
+      - name: Configurar o GitHub Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v6
+
+      - name: Enviar a pasta do site
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    name: Publicar
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
