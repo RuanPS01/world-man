@@ -549,12 +549,17 @@ input:focus-visible {
 /* ------------------------------------------------------------- Fim de jogo */
 
 .band-over {
-  top: calc(var(--u) * 86);
-  height: calc(var(--u) * 344);
+  top: calc(var(--u) * 74);
+  height: calc(var(--u) * 374);
 }
 
 .over-inner {
-  padding: calc(var(--u) * 26) calc(var(--u) * 50) 0 calc(var(--u) * 57);
+  padding: calc(var(--u) * 24) calc(var(--u) * 50) 0 calc(var(--u) * 57);
+}
+
+/* botões abaixo da faixa mais alta do ranking */
+#screen-over .band-buttons.two .gold-btn {
+  top: calc(var(--u) * 464);
 }
 
 .over-title {
@@ -575,7 +580,7 @@ input:focus-visible {
 .over-new {
   position: absolute;
   left: calc(var(--u) * 420);
-  top: calc(var(--u) * 36);
+  top: calc(var(--u) * 34);
   padding: calc(var(--u) * 2) calc(var(--u) * 12);
   border-radius: calc(var(--u) * 6);
   background: #d72b1d;
@@ -1249,10 +1254,11 @@ input:focus-visible {
   box-shadow: 0 calc(var(--u) * 5) 0 #3a1c06, 0 calc(var(--u) * 9) calc(var(--u) * 14) rgba(0, 0, 0, 0.35);
 }
 .hud-panel[data-era='tv'] .hud-deco {
-  inset: 0 0 auto;
-  height: calc(var(--u) * 12);
-  border-radius: calc(var(--u) * 26) calc(var(--u) * 26) 0 0;
-  background: linear-gradient(90deg, #d8572a 0 25%, #f0a03a 25% 50%, #f6d06a 50% 75%, #6aa84f 75%);
+  /* ocupa o card inteiro com o mesmo raio interno da borda; a faixa é só o fundo do topo,
+     assim ela segue a curva do card (uma faixa baixa com raio grande teria os cantos achatados) */
+  inset: 0;
+  border-radius: calc(var(--u) * 26);
+  background: linear-gradient(90deg, #d8572a 0 25%, #f0a03a 25% 50%, #f6d06a 50% 75%, #6aa84f 75%) top / 100% calc(var(--u) * 12) no-repeat;
 }
 .hud-panel[data-era='tv'] .hud-name {
   color: #b8401a;
