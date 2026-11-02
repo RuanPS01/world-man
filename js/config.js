@@ -1,8 +1,13 @@
 // Constantes de jogo. Unidades: "pixels lógicos" numa tela de 720 de altura.
 
+// Espaço de design: em paisagem a altura tem 720 unidades; em retrato, a largura.
 export const VIEW_H = 720;
-export const VIEW_MIN_W = 1024;
-export const VIEW_MAX_W = 1600;
+export const VIEW_MIN_W = 960;
+export const VIEW_MAX_W = 1800;
+export const PORTRAIT_MIN_H = 900;
+export const PORTRAIT_MAX_H = 1700;
+/** Largura do mundo visível em retrato (mais aberta que 720 para enxergar o que vem). */
+export const PORTRAIT_VIEW_W = 900;
 /** Margem extra renderizada ao redor da tela para a distorção de lente. */
 export const OVERSCAN = 1.22;
 
@@ -46,11 +51,6 @@ export const BULLET = {
   life: 2.1,
   range: 1700,
 };
-
-/** A cada FASE_DURACAO segundos o mundo muda de aparência e fica mais difícil. */
-export const PHASE_DURATION = 20;
-/** Ciclo visual das fases: 0 colorido, 1 cinza (como no original), 2 sépia, 3 noite. */
-export const PHASE_LOOKS = ['color', 'gray', 'sepia', 'night'];
 
 export const POST = {
   s0: 0.86, // escala no centro (lente "bulge")

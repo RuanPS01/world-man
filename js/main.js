@@ -1,6 +1,6 @@
 // Inicialização: telas, laço principal, ajuste de resolução, som e PWA.
 
-import { VIEW_H, VIEW_MIN_W, VIEW_MAX_W, OVERSCAN, POST } from './config.js';
+import { VIEW_H, VIEW_MIN_W, VIEW_MAX_W, PORTRAIT_MIN_H, PORTRAIT_MAX_H, PORTRAIT_VIEW_W, OVERSCAN, POST } from './config.js';
 import { buildSprites } from './sprites.js';
 import { Game } from './game.js';
 import { createPost } from './post.js';
@@ -8,6 +8,7 @@ import { Input } from './input.js';
 import { Sound } from './audio.js';
 import { store, loadRanking, saveScore } from './storage.js';
 import { clamp } from './utils.js';
+import { ERAS, mixAudio } from './eras.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -20,6 +21,7 @@ const overlay = post.handlesFilters ? document.createElement('canvas') : null;
 const octx = overlay ? overlay.getContext('2d') : null;
 
 const sound = new Sound();
+sound.prefetch('assets/audio/mundo-pequeno.mp3');
 const input = new Input();
 input.bindKeyboard(window);
 input.enabled = false;
@@ -43,6 +45,7 @@ const ui = {
   btnSound: $('#btn-sound'),
   btnInstall: $('#btn-install'),
   toast: $('#toast'),
+  eraCaption: $('#era-caption'),
   screens: {
     menu: $('#screen-menu'),
     controls: $('#screen-controls'),
@@ -58,52 +61,114 @@ const app = {
   lastTime: 0,
   saved: false,
   isTouch: false,
-  view: { lw: 1280, scale: 1, renderScale: 1, quality: 1 },
+  view: { dw: 1280, dh: 720, viewW: 1280, viewH: 720, portrait: false, scale: 1, renderScale: 1, quality: 1, dpr: 1 },
 };
 
 const game = new Game(sprites, {
   sfx: (n) => sound.play(n),
   onHud: (h) => updateHud(h),
-  onLevel: (_lvl, look) => sound.setLook(look),
+  onEra: (i) => showEra(i),
+  onStop: (on) => vibrate(on),
   onGameOver: (seconds) => showGameOver(seconds),
 });
 
+// ------------------------------------------------------------------ Épocas
+
+let captionTimer = 0;
+function showEra(i) {
+  const era = ERAS[i];
+  stage.dataset.era = era.id;
+  ui.eraCaption.textContent = era.label;
+  ui.eraCaption.classList.remove('show');
+  void ui.eraCaption.offsetWidth;
+  ui.eraCaption.classList.add('show');
+  clearTimeout(captionTimer);
+  captionTimer = setTimeout(() => ui.eraCaption.classList.remove('show'), 2600);
+}
+
+/** Vibração do aparelho (celulares Android) enquanto o personagem está parado. */
+function vibrate(on) {
+  if (!app.isTouch || !navigator.vibrate || sound.muted) return;
+  try {
+    if (on) navigator.vibrate([40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30, 40, 30]);
+    else navigator.vibrate(0);
+  } catch {
+    /* sem suporte */
+  }
+}
+
+function startMusicOnce() {
+  sound.unlock();
+  sound.startMusic();
+}
+window.addEventListener('pointerdown', startMusicOnce, { once: true });
+window.addEventListener('keydown', startMusicOnce, { once: true });
+
 // ------------------------------------------------------------------ Layout
 
+/**
+ * Calcula o layout para o tamanho da janela. Há dois espaços de design:
+ * paisagem (altura de 720 unidades) e retrato (largura de 720 unidades).
+ * Em retrato o mundo do jogo fica um pouco mais afastado para enxergar mais.
+ */
+function computeLayout(vw, vh) {
+  const portrait = vh > vw * 1.02;
+  if (!portrait) {
+    const dw = clamp((VIEW_H * vw) / vh, VIEW_MIN_W, VIEW_MAX_W);
+    const dh = VIEW_H;
+    return { portrait, dw, dh, scale: Math.min(vw / dw, vh / dh), viewW: dw, viewH: VIEW_H };
+  }
+  const dw = VIEW_H;
+  const dh = clamp((VIEW_H * vh) / vw, PORTRAIT_MIN_H, PORTRAIT_MAX_H);
+  const viewW = PORTRAIT_VIEW_W;
+  return { portrait, dw, dh, scale: Math.min(vw / dw, vh / dh), viewW, viewH: (viewW * dh) / dw };
+}
+
+let lastSize = { w: 0, h: 0 };
 function layout() {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const lw = clamp((VIEW_H * vw) / vh, VIEW_MIN_W, VIEW_MAX_W);
-  const scale = Math.min(vw / lw, vh / VIEW_H);
-  const cssW = Math.round(lw * scale);
-  const cssH = Math.round(VIEW_H * scale);
+  const vw = Math.round(window.innerWidth);
+  const vh = Math.round(window.innerHeight);
+  // com o teclado virtual aberto (digitando o nome) não encolhe a tela
+  const typing = document.activeElement === ui.nameInput;
+  if (typing && app.isTouch && vw === lastSize.w && vh < lastSize.h * 0.8) return;
+  lastSize = { w: vw, h: vh };
+
+  const L = computeLayout(vw, vh);
+  const cssW = Math.round(L.dw * L.scale);
+  const cssH = Math.round(L.dh * L.scale);
   stage.style.width = `${cssW}px`;
   stage.style.height = `${cssH}px`;
-  stage.style.setProperty('--u', `${scale}px`);
+  stage.style.setProperty('--u', `${L.scale}px`);
+  stage.style.setProperty('--dw', String(L.dw));
+  stage.style.setProperty('--dh', String(L.dh));
+  stage.classList.toggle('portrait', L.portrait);
+  stage.classList.toggle('compact', cssH < 520 || cssW < 560);
+  document.documentElement.classList.toggle('portrait', L.portrait);
 
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const outScale = Math.min(1, 2560 / (cssW * dpr));
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  const outScale = Math.min(1, 1920 / (Math.max(cssW, cssH) * dpr));
+  app.view.dpr = dpr * outScale;
   post.canvas.width = Math.max(2, Math.round(cssW * dpr * outScale));
   post.canvas.height = Math.max(2, Math.round(cssH * dpr * outScale));
 
-  app.view.lw = lw;
-  app.view.scale = scale;
+  Object.assign(app.view, L);
+  game.setViewport({ w: L.viewW, h: L.viewH, portrait: L.portrait });
   applyRenderScale();
 }
 
 function applyRenderScale() {
   const v = app.view;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const cssH = VIEW_H * v.scale;
-  let rs = clamp((cssH * dpr) / VIEW_H, 0.5, 1.35) * v.quality;
+  const cssH = v.dh * v.scale;
+  let rs = clamp((cssH * dpr) / v.viewH, 0.4, 1.35) * v.quality;
   // limita a quantidade de pixels da cena
   const maxPixels = app.isTouch ? 1.5e6 : 2.6e6;
-  const px = v.lw * OVERSCAN * VIEW_H * OVERSCAN * rs * rs;
+  const px = v.viewW * OVERSCAN * v.viewH * OVERSCAN * rs * rs;
   if (px > maxPixels) rs *= Math.sqrt(maxPixels / px);
-  rs = Math.max(0.4, rs);
+  rs = Math.max(0.3, rs);
   v.renderScale = rs;
-  scene.width = Math.round(v.lw * OVERSCAN * rs);
-  scene.height = Math.round(VIEW_H * OVERSCAN * rs);
+  scene.width = Math.round(v.viewW * OVERSCAN * rs);
+  scene.height = Math.round(v.viewH * OVERSCAN * rs);
   if (overlay) {
     overlay.width = scene.width;
     overlay.height = scene.height;
@@ -111,7 +176,9 @@ function applyRenderScale() {
 }
 
 window.addEventListener('resize', layout);
-window.addEventListener('orientationchange', () => setTimeout(layout, 120));
+window.addEventListener('orientationchange', () => setTimeout(layout, 150));
+if (window.visualViewport) window.visualViewport.addEventListener('resize', layout);
+ui.nameInput.addEventListener('blur', () => setTimeout(layout, 50));
 
 // ------------------------------------------------------------------ Telas
 
@@ -147,7 +214,6 @@ async function startGame() {
   store.set('name', app.name);
   ui.hudName.textContent = app.name;
   sound.unlock();
-  sound.setLook('color');
   sound.startMusic();
   if (app.isTouch) await enterFullscreen();
   game.startRun(app.name);
@@ -169,7 +235,8 @@ function resumeGame() {
 function toMenu() {
   if (game.mode !== 'attract') game.enterAttract();
   sound.resume();
-  sound.setLook('color');
+  vibrate(false);
+  delete stage.dataset.era;
   showScreen('menu');
 }
 
@@ -184,7 +251,8 @@ function showGameOver(seconds) {
   ui.overNew.hidden = !(seconds > best && seconds > 0);
   renderRanking(list);
   game.enterAttract();
-  sound.setLook('color');
+  vibrate(false);
+  delete stage.dataset.era;
   showScreen('over');
 }
 
@@ -287,7 +355,6 @@ async function enterFullscreen() {
   const el = document.documentElement;
   try {
     if (!document.fullscreenElement && el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' });
-    if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape').catch(() => {});
   } catch {
     /* navegador não permite: tudo bem */
   }
@@ -313,7 +380,20 @@ window.addEventListener('keydown', (e) => {
 });
 
 // toque
-document.querySelectorAll('.tbtn').forEach((b) => input.bindButton(b, b.dataset.action));
+input.bindTouchPad(
+  ui.touch,
+  [...document.querySelectorAll('.tbtn')].map((el) => ({ el, action: el.dataset.action })),
+);
+// em aparelhos híbridos (tela de toque + teclado) esconde os botões ao usar o teclado
+window.addEventListener('keydown', (e) => {
+  if (app.screen === 'playing' && /^(Arrow|Key[WAXJ]|Space)/.test(e.code)) stage.classList.add('kbd');
+});
+window.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch') stage.classList.remove('kbd');
+});
+// impede zoom por gesto e por toque duplo (iOS)
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('dblclick', (e) => e.preventDefault());
 function markTouch() {
   if (app.isTouch) return;
   app.isTouch = true;
@@ -360,8 +440,8 @@ function frame(now) {
       pw: scene.width,
       ph: scene.height,
       scale: v.renderScale,
-      w: v.lw * OVERSCAN,
-      h: VIEW_H * OVERSCAN,
+      w: v.viewW * OVERSCAN,
+      h: v.viewH * OVERSCAN,
       octx,
     },
     paused ? 0 : dt,
@@ -369,14 +449,19 @@ function frame(now) {
   const play = game.mode === 'play';
   post.render(scene, {
     overlay,
-    filters: game.filters,
-    aspect: v.lw / VIEW_H,
+    fx: game.postParams(),
+    dt: paused ? 0 : dt,
+    dpr: v.dpr || 1,
+    lowQuality: v.quality < 0.8,
+    aspect: v.viewW / v.viewH,
+    portrait: v.portrait,
     overscan: OVERSCAN,
     lens: play,
     blur: play ? POST.blur * v.renderScale : 0,
-    vignette: play ? POST.vignette : 0.45,
     flash: [1, 0.96, 0.85, Math.min(0.85, game.flash)],
   });
+  const W = game.world;
+  sound.setProfile(play ? mixAudio(ERAS[W.from].audio, ERAS[W.to].audio, W.mix) : ERAS[3].audio);
 
   // ajuste automático de qualidade se o aparelho estiver lento
   if (app.screen === 'playing') {

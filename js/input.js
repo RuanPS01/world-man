@@ -48,6 +48,7 @@ export class Input {
   }
 
   releaseAll() {
+    this.releaseTouch?.();
     for (const a of ACTIONS) {
       this.sources[a].clear();
       this.held[a] = false;
@@ -96,6 +97,82 @@ export class Input {
     el.addEventListener('pointercancel', up);
     el.addEventListener('lostpointercapture', up);
     el.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  /**
+   * Controles de toque. A camada inteira recebe os dedos e cada dedo "acende"
+   * o botão mais próximo, então dá para deslizar de um botão para outro
+   * (por exemplo, de Atirar para Parar) sem tirar o dedo da tela. Um toque
+   * fora dos botões na metade direita da tela também pula.
+   */
+  bindTouchPad(layer, buttons) {
+    const ptrs = new Map();
+    const src = (id) => `tp:${id}`;
+    const refresh = () => {
+      const active = new Set(ptrs.values());
+      for (const b of buttons) b.el.classList.toggle('is-down', active.has(b.action));
+    };
+    const hit = (x, y) => {
+      let best = null;
+      let bestK = Infinity;
+      for (const b of buttons) {
+        const r = b.el.getBoundingClientRect();
+        if (!r.width) continue;
+        const rad = (r.width / 2) * 1.3;
+        const k = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) / rad;
+        if (k < 1 && k < bestK) {
+          bestK = k;
+          best = b.action;
+        }
+      }
+      return best;
+    };
+    const set = (id, act) => {
+      const prev = ptrs.get(id) || null;
+      if (prev === act) return;
+      if (prev) this.release(prev, src(id));
+      if (act) this.press(act, src(id));
+      ptrs.set(id, act);
+      refresh();
+    };
+    const end = (e) => {
+      if (!ptrs.has(e.pointerId)) return;
+      set(e.pointerId, null);
+      ptrs.delete(e.pointerId);
+      refresh();
+    };
+    layer.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      try {
+        layer.setPointerCapture(e.pointerId);
+      } catch {
+        /* alguns navegadores não deixam capturar */
+      }
+      let act = hit(e.clientX, e.clientY);
+      if (!act) {
+        const r = layer.getBoundingClientRect();
+        if (e.clientX > r.left + r.width * 0.5) act = 'jump';
+      }
+      set(e.pointerId, act);
+    });
+    layer.addEventListener('pointermove', (e) => {
+      if (!ptrs.has(e.pointerId)) return;
+      // o dedo continua valendo para o último botão até encostar em outro
+      const act = hit(e.clientX, e.clientY);
+      if (act) set(e.pointerId, act);
+    });
+    layer.addEventListener('pointerup', end);
+    layer.addEventListener('pointercancel', end);
+    layer.addEventListener('lostpointercapture', end);
+    layer.addEventListener('contextmenu', (e) => e.preventDefault());
+    this.releaseTouch = () => {
+      for (const id of [...ptrs.keys()]) {
+        set(id, null);
+        ptrs.delete(id);
+      }
+      refresh();
+    };
   }
 
   pollGamepad() {

@@ -90,18 +90,31 @@
       ctx.arc(cx, cy, R - 56, 0, Math.PI * 2);
       ctx.fill();
 
-      // ponteiro azul
+      // ponteiro de relógio (preto)
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(0.42);
-      ctx.fillStyle = 'rgba(58,134,182,0.9)';
+      ctx.fillStyle = '#0b0b0d';
+      const T = R + 22;
       ctx.beginPath();
-      ctx.moveTo(-6, 0);
-      ctx.lineTo(-6, -(R - 4));
-      ctx.lineTo(0, -(R + 14));
-      ctx.lineTo(6, -(R - 4));
-      ctx.lineTo(6, 0);
+      ctx.moveTo(-5, 0);
+      ctx.lineTo(-5, -(R - 70));
+      ctx.bezierCurveTo(-5, -(R - 62), -19, -(R - 60), -17, -(R - 40));
+      ctx.bezierCurveTo(-16, -(R - 20), -6, -(R + 6), 0, -T);
+      ctx.bezierCurveTo(6, -(R + 6), 16, -(R - 20), 17, -(R - 40));
+      ctx.bezierCurveTo(19, -(R - 60), 5, -(R - 62), 5, -(R - 70));
+      ctx.lineTo(5, 0);
       ctx.fill();
+      ctx.restore();
+      // numeral do mostrador
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(-0.38);
+      ctx.fillStyle = '#f8d977';
+      ctx.font = '700 40px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('XII', 0, -(R - 104));
+      ctx.fillRect(-4, -(R - 64), 8, 22);
       ctx.restore();
 
       // personagem

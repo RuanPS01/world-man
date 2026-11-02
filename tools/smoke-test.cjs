@@ -36,6 +36,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   await page.fill('#name-input', 'Tester');
   await page.click('#btn-start');
+  // imortal durante as capturas (os ponteiros passam com frequência)
+  await page.evaluate(() => {
+    const g = window.__worldman.game;
+    g.__kill = g.killPlayer;
+    g.killPlayer = () => {};
+  });
   await sleep(1500);
   await page.screenshot({ path: path.join(OUT, '04-jogo.png') });
 
@@ -59,14 +65,29 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   });
   console.log('estado:', JSON.stringify(state));
 
-  // pula direto para a fase cinza (20 s) para conferir o visual
+  // passa por todas as épocas
+  const eras = await page.evaluate(async () => (await import('/js/eras.js')).ERAS.map((e) => e.id));
+  for (let i = 0; i < eras.length; i++) {
+    await page.evaluate((n) => window.__worldman.game.debugEra(n), i);
+    await sleep(900);
+    await page.screenshot({ path: path.join(OUT, `07-epoca-${i}-${eras[i]}.png`) });
+  }
+
+  // transição no meio do caminho: fronteira do tempo entrando na tela
   await page.evaluate(() => {
     const g = window.__worldman.game;
-    g.time = 20.2;
+    g.debugEra(0);
+    g.time = 20.05;
+    g.era = 1;
+    g.world.beginTransition(1, g.cam.angle);
+    g.world.boundary = g.cam.angle + 0.12;
   });
-  await page.waitForFunction(() => window.__worldman.game.filters.gray > 0.95 || window.__worldman.game.state !== 'run', null, { timeout: 15000 });
-  await sleep(200);
-  await page.screenshot({ path: path.join(OUT, '07-fase-cinza.png') });
+  await sleep(500);
+  await page.screenshot({ path: path.join(OUT, '07z-transicao.png') });
+  await page.evaluate(() => {
+    const g = window.__worldman.game;
+    g.killPlayer = g.__kill;
+  });
 
   // força o fim de jogo
   await page.evaluate(() => window.__worldman.game.killPlayer('teste'));

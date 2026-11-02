@@ -5,6 +5,8 @@
   "description": "WorldMan: jogo de plataforma infinito em um planeta que gira, recriado para a web como PWA.",
   "scripts": {
     "start": "node tools/serve.mjs 8080",
+    "check": "node tools/check-site.mjs",
+    "build": "node tools/build-site.mjs _site",
     "icons": "node tools/generate-icons.cjs",
     "test": "node tools/smoke-test.cjs"
   }
