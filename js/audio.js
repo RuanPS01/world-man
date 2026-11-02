@@ -269,6 +269,23 @@ export class Sound {
           this.tone(f, t, 1.6, { type: 'sine', gain: g, attack: 0.005, release: 1.4 });
         }
         break;
+      case 'empty':
+        // gatilho sem bala
+        this.tone(1900, t, 0.03, { type: 'triangle', gain: 0.05, slide: 1300 });
+        this.noise(t, 0.02, { gain: 0.06, type: 'highpass', freq: 4000 });
+        break;
+      case 'reload':
+        // pente vazio: tira o pente e começa a recarregar
+        this.noise(t, 0.05, { gain: 0.12, type: 'bandpass', freq: 1500, q: 3 });
+        this.tone(620, t + 0.12, 0.05, { type: 'square', gain: 0.04, slide: 420 });
+        this.noise(t + 0.3, 0.18, { gain: 0.06, type: 'bandpass', freq: 900, endFreq: 2600, q: 2 });
+        break;
+      case 'ready':
+        // pente novo encaixado: pronto para atirar
+        this.noise(t, 0.04, { gain: 0.14, type: 'bandpass', freq: 2200, q: 4 });
+        this.noise(t + 0.08, 0.04, { gain: 0.12, type: 'bandpass', freq: 1700, q: 4 });
+        this.tone(1320, t + 0.12, 0.12, { type: 'triangle', gain: 0.05 });
+        break;
       case 'save':
         this.tone(midi(79), t, 0.12, { type: 'triangle', gain: 0.08 });
         this.tone(midi(84), t + 0.1, 0.22, { type: 'triangle', gain: 0.08 });

@@ -35,6 +35,15 @@ const ui = {
   hudStopsLine: $('#hud-stops-line'),
   hudTime: $('#hud-time'),
   hudStop: $('#hud-stop'),
+  hudStopNum: $('#hud-stop-num'),
+  hudStopFill: $('#hud-stop-fill'),
+  hudPanel: $('#hud-panel'),
+  hudAmmo: $('#hud-ammo'),
+  hudAmmoIcons: $('#hud-ammo-icons'),
+  hudAmmoNum: $('#hud-ammo-num'),
+  hudReloadFill: $('#hud-reload-fill'),
+  touchShoot: $('#touch .tbtn-shoot'),
+  touchAmmo: $('#touch-ammo'),
   touch: $('#touch'),
   nameInput: $('#name-input'),
   overTime: $('#over-time'),
@@ -76,15 +85,36 @@ const game = new Game(sprites, {
 // ------------------------------------------------------------------ Épocas
 
 let captionTimer = 0;
+let hudSwapTimer = 0;
 function showEra(i) {
   const era = ERAS[i];
   stage.dataset.era = era.id;
+  swapHudEra(era.id);
   ui.eraCaption.textContent = era.label;
   ui.eraCaption.classList.remove('show');
   void ui.eraCaption.offsetWidth;
   ui.eraCaption.classList.add('show');
   clearTimeout(captionTimer);
   captionTimer = setTimeout(() => ui.eraCaption.classList.remove('show'), 2600);
+}
+
+/** Troca o visual do painel da partida: o painel sai e volta com a cara da nova época. */
+function swapHudEra(id) {
+  const panel = ui.hudPanel;
+  clearTimeout(hudSwapTimer);
+  panel.classList.remove('hud-out', 'hud-in');
+  if (ui.hud.hidden || panel.dataset.era === id) {
+    panel.dataset.era = id;
+    return;
+  }
+  panel.classList.add('hud-out');
+  hudSwapTimer = setTimeout(() => {
+    panel.classList.remove('hud-out');
+    panel.dataset.era = id;
+    void panel.offsetWidth;
+    panel.classList.add('hud-in');
+    hudSwapTimer = setTimeout(() => panel.classList.remove('hud-in'), 900);
+  }, 240);
 }
 
 /** Vibração do aparelho (celulares Android) enquanto o personagem está parado. */
@@ -217,6 +247,7 @@ async function startGame() {
   sound.unlock();
   sound.startMusic();
   if (app.isTouch) await enterFullscreen();
+  resetHud();
   game.startRun(app.name);
   showScreen('playing');
 }
@@ -309,11 +340,83 @@ function toast(msg) {
   toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 2200);
 }
 
+/** Reinicia uma animação de CSS (tira e põe a classe). */
+function replay(el, cls) {
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+
+const hudState = { stops: -1, ammo: -1, mag: 0, reloading: false, stopOn: false };
+let stopOutTimer = 0;
+
+/** Painel limpo para uma nova partida (sem animações da partida anterior). */
+function resetHud() {
+  clearTimeout(stopOutTimer);
+  Object.assign(hudState, { stops: -1, ammo: -1, reloading: false, stopOn: false });
+  ui.hudAmmo.classList.remove('reloading', 'low', 'ready');
+  ui.touchShoot.classList.remove('reloading');
+  ui.hudStop.classList.remove('pop', 'low', 'out');
+  ui.hudStop.hidden = true;
+}
+
 function updateHud(h) {
-  ui.hudStops.textContent = String(h.stops);
+  // paradas (pulsa quando uma é gasta)
+  if (h.stops !== hudState.stops) {
+    if (hudState.stops >= 0 && h.stops < hudState.stops) replay(ui.hudStops, 'bump');
+    hudState.stops = h.stops;
+    ui.hudStops.textContent = String(h.stops);
+  }
   ui.hudTime.textContent = String(h.time);
-  ui.hudStop.textContent = h.stopLeft > 0 ? `${h.stopLeft}s` : '';
   ui.hudStopsLine.classList.toggle('no-stops', h.noStops);
+
+  // contagem da parada com milissegundos (ex.: 1,734s) e barra que esvazia
+  const stopOn = h.stopLeft > 0;
+  if (stopOn) {
+    clearTimeout(stopOutTimer);
+    if (!hudState.stopOn) {
+      ui.hudStop.hidden = false;
+      ui.hudStop.classList.remove('out');
+      replay(ui.hudStop, 'pop');
+    }
+    ui.hudStopNum.textContent = `${h.stopLeft.toFixed(3).replace('.', ',')}s`;
+    ui.hudStopFill.style.transform = `scaleX(${clamp(h.stopLeft / h.stopMax, 0, 1)})`;
+    ui.hudStop.classList.toggle('low', h.stopLeft < 0.7);
+  } else if (hudState.stopOn) {
+    ui.hudStop.classList.remove('pop', 'low');
+    ui.hudStop.classList.add('out');
+    stopOutTimer = setTimeout(() => {
+      ui.hudStop.hidden = true;
+      ui.hudStop.classList.remove('out');
+    }, 220);
+  }
+  hudState.stopOn = stopOn;
+
+  // contador de balas (10 por pente) e recarga de 3 segundos
+  if (h.mag !== hudState.mag) {
+    hudState.mag = h.mag;
+    ui.hudAmmoIcons.textContent = '';
+    for (let i = 0; i < h.mag; i++) ui.hudAmmoIcons.appendChild(document.createElement('i'));
+    hudState.ammo = -1;
+  }
+  if (h.ammo !== hudState.ammo) {
+    hudState.ammo = h.ammo;
+    const icons = ui.hudAmmoIcons.children;
+    for (let i = 0; i < icons.length; i++) icons[i].classList.toggle('spent', i >= h.ammo);
+    ui.hudAmmoNum.textContent = String(h.ammo);
+    ui.touchAmmo.textContent = String(h.ammo);
+    ui.hudAmmo.classList.toggle('low', h.ammo > 0 && h.ammo <= 3);
+  }
+  if (h.reloading !== hudState.reloading) {
+    if (hudState.reloading && !h.reloading) replay(ui.hudAmmo, 'ready');
+    hudState.reloading = h.reloading;
+    ui.hudAmmo.classList.toggle('reloading', h.reloading);
+    ui.touchShoot.classList.toggle('reloading', h.reloading);
+  }
+  if (h.reloading) {
+    ui.hudReloadFill.style.transform = `scaleX(${h.reload})`;
+    ui.touchShoot.style.setProperty('--p', String(h.reload));
+  }
 }
 
 // ------------------------------------------------------------------ Botões

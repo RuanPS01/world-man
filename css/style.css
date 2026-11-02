@@ -36,6 +36,33 @@
   font-weight: 700;
   font-display: swap;
 }
+/* fontes do painel de cada época */
+@font-face {
+  font-family: 'Special Elite';
+  src: url('../assets/fonts/special-elite-latin.woff2') format('woff2');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Righteous';
+  src: url('../assets/fonts/righteous-latin.woff2') format('woff2');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Audiowide';
+  src: url('../assets/fonts/audiowide-latin.woff2') format('woff2');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Orbitron';
+  src: url('../assets/fonts/orbitron-latin.woff2') format('woff2');
+  font-weight: 400 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Black Ops One';
+  src: url('../assets/fonts/black-ops-one-latin.woff2') format('woff2');
+  font-display: swap;
+}
 
 :root {
   --gold: #f6b300;
@@ -401,8 +428,10 @@ input:focus-visible {
 }
 
 .credits-list {
-  font-size: calc(var(--u) * 23);
-  line-height: 1.55;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: calc(var(--u) * 26);
+  line-height: 1.5;
 }
 
 .controls-list li {
@@ -670,25 +699,42 @@ input:focus-visible {
 .hud {
   position: absolute;
   inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   pointer-events: none;
 }
 
+/* Painel da partida. As variáveis mudam com a época (veja "Painel por época"). */
 .hud-panel {
-  position: absolute;
-  left: 50%;
-  top: calc(var(--u) * 40);
-  transform: translateX(-50%);
-  min-width: calc(var(--u) * 318);
-  padding: calc(var(--u) * 10) calc(var(--u) * 26) calc(var(--u) * 14);
+  --hud-ink: #121212;
+  --hud-accent: #d72b1d;
+  --hud-ammo: #c98a2c;
+  --hud-font: var(--serif);
+  --hud-name-font: var(--serif);
+  position: relative;
+  margin-top: calc(var(--u) * 40);
+  min-width: calc(var(--u) * 330);
+  padding: calc(var(--u) * 10) calc(var(--u) * 28) calc(var(--u) * 12);
   border-radius: calc(var(--u) * 16);
   background: rgba(238, 246, 176, 0.44);
   text-align: center;
-  font-family: var(--serif);
+  font-family: var(--hud-font);
   font-weight: 600;
-  color: #121212;
+  color: var(--hud-ink);
+  transition: background 0.4s ease, color 0.4s ease;
+}
+
+.hud-deco {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .hud-name {
+  position: relative;
+  font-family: var(--hud-name-font);
   font-size: calc(var(--u) * 28);
   line-height: 1.15;
   color: #fff;
@@ -696,12 +742,29 @@ input:focus-visible {
 }
 
 .hud-line {
-  font-size: calc(var(--u) * 36);
-  line-height: 1.02;
+  position: relative;
+  font-size: calc(var(--u) * 34);
+  line-height: 1.06;
+}
+
+.hud-num {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-num.bump {
+  animation: hud-bump 0.38s ease;
+}
+
+@keyframes hud-bump {
+  30% {
+    transform: scale(1.4);
+    color: var(--hud-accent);
+  }
 }
 
 .hud-line.no-stops {
-  color: #d72b1d;
+  color: var(--hud-accent);
   animation: shake 0.3s linear 2;
 }
 
@@ -714,15 +777,167 @@ input:focus-visible {
   }
 }
 
-.hud-stop {
-  min-height: 0;
-  font-size: calc(var(--u) * 30);
-  line-height: 1.05;
-  color: #d72b1d;
+/* contador de balas: 10 projéteis; vira barra de recarga quando o pente acaba */
+.hud-ammo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 8);
+  height: calc(var(--u) * 24);
+  margin-top: calc(var(--u) * 6);
 }
 
-.hud-stop:empty {
+.hud-ammo-icons {
+  display: flex;
+  align-items: flex-end;
+  gap: calc(var(--u) * 3);
+}
+
+.hud-ammo-icons i {
+  width: calc(var(--u) * 8);
+  height: calc(var(--u) * 20);
+  border-radius: calc(var(--u) * 3.5) calc(var(--u) * 3.5) calc(var(--u) * 1.5) calc(var(--u) * 1.5) / calc(var(--u) * 7) calc(var(--u) * 7) calc(var(--u) * 1.5) calc(var(--u) * 1.5);
+  background: linear-gradient(90deg, #fbe3b0 0%, var(--hud-ammo) 55%, rgba(0, 0, 0, 0.45) 140%);
+  box-shadow: inset 0 calc(var(--u) * -4) 0 rgba(0, 0, 0, 0.28);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.hud-ammo-icons i.spent {
+  opacity: 0.2;
+  transform: translateY(calc(var(--u) * 3)) scale(0.8);
+}
+
+.hud-ammo-num {
+  min-width: 1.4em;
+  text-align: left;
+  font-size: calc(var(--u) * 20);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-ammo.low .hud-ammo-num {
+  color: var(--hud-accent);
+  animation: hud-blink 0.5s steps(2) infinite;
+}
+
+@keyframes hud-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.hud-reload {
   display: none;
+  align-items: center;
+  gap: calc(var(--u) * 8);
+  font-size: calc(var(--u) * 17);
+}
+
+.hud-ammo.reloading .hud-ammo-icons,
+.hud-ammo.reloading .hud-ammo-num {
+  display: none;
+}
+
+.hud-ammo.reloading .hud-reload {
+  display: flex;
+}
+
+.hud-reload-label {
+  animation: hud-blink 0.8s steps(2) infinite;
+}
+
+.hud-reload-bar,
+.hud-stop-bar {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: calc(var(--u) * 4);
+}
+
+.hud-reload-bar {
+  width: calc(var(--u) * 110);
+  height: calc(var(--u) * 8);
+}
+
+.hud-reload-bar i,
+.hud-stop-bar i {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+}
+
+.hud-reload-bar i {
+  background: var(--hud-ammo);
+  transform: scaleX(0);
+}
+
+.hud-ammo.ready {
+  animation: hud-ready 0.45s ease;
+}
+
+@keyframes hud-ready {
+  40% {
+    transform: scale(1.15);
+    filter: brightness(1.6);
+  }
+}
+
+/* contagem da parada, com milissegundos e barra que esvazia */
+.hud-stop {
+  position: relative;
+  margin-top: calc(var(--u) * 4);
+  color: var(--hud-accent);
+}
+
+.hud-stop-num {
+  display: inline-block;
+  min-width: 4.2em;
+  font-size: calc(var(--u) * 30);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-stop-bar {
+  width: calc(var(--u) * 170);
+  height: calc(var(--u) * 6);
+  margin: calc(var(--u) * 3) auto 0;
+}
+
+.hud-stop-bar i {
+  background: var(--hud-accent);
+}
+
+.hud-stop.pop {
+  animation: hud-stop-in 0.3s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.hud-stop.low .hud-stop-num {
+  animation: hud-stop-low 0.22s ease-in-out infinite alternate;
+}
+
+.hud-stop.out {
+  animation: hud-stop-out 0.22s ease forwards;
+}
+
+@keyframes hud-stop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+@keyframes hud-stop-low {
+  to {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes hud-stop-out {
+  to {
+    opacity: 0;
+    transform: translateY(calc(var(--u) * -8)) scale(0.8);
+  }
 }
 
 /* ------------------------------------------------------------- Ferramentas */
@@ -829,6 +1044,30 @@ input:focus-visible {
   transform: scale(0.93);
 }
 
+/* contador de balas no botão Atirar e anel de recarga */
+.tbtn-count {
+  position: absolute;
+  top: 4%;
+  right: 4%;
+  min-width: 1.9em;
+  padding: 0.1em 0.35em;
+  border-radius: 1em;
+  background: #f6b300;
+  color: #2a1a04;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: calc(var(--bs, 120px) * 0.14);
+  line-height: 1.2;
+  text-align: center;
+}
+.tbtn-shoot.reloading {
+  background: conic-gradient(rgba(246, 179, 0, 0.55) calc(var(--p, 0) * 1turn), rgba(36, 50, 56, 0.36) 0);
+}
+.tbtn-shoot.reloading .tbtn-count {
+  background: #6a6a6a;
+  color: #eee;
+}
+
 /* Atirar e Parar à esquerda, Pular à direita. Os tamanhos acompanham a tela,
    mas têm limite em pixels para não ficarem enormes em tablets. */
 .touch {
@@ -882,7 +1121,7 @@ input:focus-visible {
 .era-caption {
   position: absolute;
   left: 50%;
-  top: calc(var(--u) * 184);
+  top: calc(var(--u) * 226);
   transform: translateX(-50%) translateY(calc(var(--u) * 10));
   padding: calc(var(--u) * 4) calc(var(--u) * 22);
   font-family: var(--deco);
@@ -917,81 +1156,334 @@ input:focus-visible {
   }
 }
 
-#stage[data-era='sepia'] .hud-panel {
-  background: rgba(236, 222, 188, 0.5);
-  color: #2e2210;
-}
 #stage[data-era='sepia'] .era-caption {
   color: #f1e2bd;
   font-style: italic;
-}
-#stage[data-era='bw'] .hud-panel {
-  background: rgba(225, 225, 225, 0.45);
-  color: #111;
-}
-#stage[data-era='bw'] .hud-stop,
-#stage[data-era='sepia'] .hud-stop {
-  color: #6a1a10;
-}
-#stage[data-era='tv'] .hud-panel {
-  background: rgba(250, 230, 170, 0.5);
-  border-radius: calc(var(--u) * 26);
-  color: #3a1e08;
 }
 #stage[data-era='tv'] .era-caption {
   color: #ffd77a;
   font-family: var(--cinzel);
 }
-#stage[data-era='neon'] .hud-panel {
-  background: rgba(20, 8, 40, 0.55);
-  border: calc(var(--u) * 2) solid #ff3fd2;
-  box-shadow: 0 0 calc(var(--u) * 14) rgba(255, 63, 210, 0.6);
-  color: #ffe6fb;
-}
-#stage[data-era='neon'] .hud-name {
-  color: #7af4ff;
-}
 #stage[data-era='neon'] .era-caption {
   color: #ffd6f7;
   text-shadow: 0 0 calc(var(--u) * 12) #ff3fd2, 0 0 calc(var(--u) * 24) #ff3fd2;
-}
-#stage[data-era='tron'] .hud-panel {
-  background: rgba(0, 8, 16, 0.65);
-  border: calc(var(--u) * 2) solid #00e5ff;
-  border-radius: calc(var(--u) * 4);
-  box-shadow: 0 0 calc(var(--u) * 14) rgba(0, 229, 255, 0.55);
-  color: #bff8ff;
-}
-#stage[data-era='tron'] .hud-name {
-  color: #ff9a1f;
 }
 #stage[data-era='tron'] .era-caption {
   font-family: var(--cinzel);
   color: #bff8ff;
   text-shadow: 0 0 calc(var(--u) * 12) #00e5ff, 0 0 calc(var(--u) * 24) #00e5ff;
 }
-#stage[data-era='neon'] .hud-stop,
-#stage[data-era='tron'] .hud-stop {
-  color: #ff5a7a;
-}
-#stage[data-era='apoc'] .hud-panel {
-  background: rgba(70, 44, 26, 0.6);
-  border: calc(var(--u) * 2) solid rgba(200, 116, 46, 0.6);
-  color: #f2d6b0;
-}
-#stage[data-era='apoc'] .hud-name {
-  color: #ffb070;
-}
 #stage[data-era='apoc'] .era-caption {
   color: #ffc48a;
   text-shadow: 0 0 calc(var(--u) * 10) rgba(255, 90, 20, 0.8);
 }
-#stage[data-era='apoc'] .hud-stop {
-  color: #ff7a4a;
+
+/* ------------------------------------------------------------- Painel por época */
+
+/* Anos 1900: pergaminho com moldura dupla */
+.hud-panel[data-era='sepia'] {
+  --hud-ink: #3a2612;
+  --hud-accent: #8a1c10;
+  --hud-ammo: #b8862e;
+  --hud-name-font: var(--deco);
+  background: radial-gradient(ellipse at 50% 40%, #f6ead0 0%, #e8d3a4 70%, #d2b27a 100%);
+  border: calc(var(--u) * 4) double #6b4a22;
+  border-radius: calc(var(--u) * 6);
+  box-shadow: 0 calc(var(--u) * 4) calc(var(--u) * 12) rgba(40, 25, 10, 0.45), inset 0 0 calc(var(--u) * 18) rgba(120, 80, 30, 0.35);
+}
+.hud-panel[data-era='sepia'] .hud-deco {
+  inset: calc(var(--u) * 5);
+  border: calc(var(--u) * 1) solid rgba(107, 74, 34, 0.55);
+  border-radius: calc(var(--u) * 3);
+}
+.hud-panel[data-era='sepia'] .hud-name {
+  color: #6b4a22;
+  font-weight: 900;
+  text-shadow: none;
 }
 
-.hud-panel {
-  transition: background 0.8s ease, color 0.8s ease, border-color 0.8s ease, box-shadow 0.8s ease;
+/* Anos 1940: ficha datilografada presa com fita */
+.hud-panel[data-era='bw'] {
+  --hud-ink: #1c1c1c;
+  --hud-accent: #8a1010;
+  --hud-ammo: #9a9a9a;
+  --hud-font: 'Special Elite', 'Courier New', monospace;
+  --hud-name-font: 'Special Elite', 'Courier New', monospace;
+  background: repeating-linear-gradient(180deg, #f5f2e8 0, #f5f2e8 calc(var(--u) * 21), #cdd5e0 calc(var(--u) * 22)), #f5f2e8;
+  border-radius: calc(var(--u) * 2);
+  box-shadow: 0 calc(var(--u) * 5) calc(var(--u) * 10) rgba(0, 0, 0, 0.45);
+  transform: rotate(-1.2deg);
+}
+.hud-panel[data-era='bw'] .hud-deco {
+  inset: auto;
+  top: calc(var(--u) * -11);
+  left: 50%;
+  width: calc(var(--u) * 96);
+  height: calc(var(--u) * 24);
+  margin-left: calc(var(--u) * -48);
+  background: rgba(235, 232, 210, 0.82);
+  transform: rotate(3deg);
+  box-shadow: 0 calc(var(--u) * 1) calc(var(--u) * 2) rgba(0, 0, 0, 0.25);
+}
+.hud-panel[data-era='bw'] .hud-name {
+  color: #333;
+  letter-spacing: calc(var(--u) * 3);
+  text-transform: uppercase;
+  text-shadow: none;
+}
+.hud-panel[data-era='bw'] .hud-line {
+  font-size: calc(var(--u) * 30);
+}
+
+/* Anos 1970: painel retrô com listras */
+.hud-panel[data-era='tv'] {
+  --hud-ink: #3a1c06;
+  --hud-accent: #c8401a;
+  --hud-ammo: #e09a2a;
+  --hud-font: 'Righteous', 'Trebuchet MS', sans-serif;
+  --hud-name-font: 'Righteous', 'Trebuchet MS', sans-serif;
+  padding-top: calc(var(--u) * 18);
+  background: linear-gradient(180deg, #fbe7b8, #f3cf86);
+  border: calc(var(--u) * 4) solid #5a2e10;
+  border-radius: calc(var(--u) * 30);
+  box-shadow: 0 calc(var(--u) * 5) 0 #3a1c06, 0 calc(var(--u) * 9) calc(var(--u) * 14) rgba(0, 0, 0, 0.35);
+}
+.hud-panel[data-era='tv'] .hud-deco {
+  inset: 0 0 auto;
+  height: calc(var(--u) * 12);
+  border-radius: calc(var(--u) * 26) calc(var(--u) * 26) 0 0;
+  background: linear-gradient(90deg, #d8572a 0 25%, #f0a03a 25% 50%, #f6d06a 50% 75%, #6aa84f 75%);
+}
+.hud-panel[data-era='tv'] .hud-name {
+  color: #b8401a;
+  text-shadow: 0 calc(var(--u) * 2) 0 rgba(255, 255, 255, 0.6);
+}
+.hud-panel[data-era='tv'] .hud-line {
+  font-size: calc(var(--u) * 30);
+  font-weight: 400;
+}
+
+/* Anos 2020: vidro fosco */
+.hud-panel[data-era='hd'] {
+  --hud-ink: #0f2233;
+  --hud-accent: #e5383b;
+  --hud-ammo: #e0a33a;
+  --hud-font: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --hud-name-font: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: rgba(255, 255, 255, 0.34);
+  -webkit-backdrop-filter: blur(10px) saturate(1.5);
+  backdrop-filter: blur(10px) saturate(1.5);
+  border: calc(var(--u) * 1) solid rgba(255, 255, 255, 0.75);
+  border-radius: calc(var(--u) * 20);
+  box-shadow: 0 calc(var(--u) * 8) calc(var(--u) * 24) rgba(10, 40, 70, 0.25);
+}
+.hud-panel[data-era='hd'] .hud-name {
+  color: #1d5a85;
+  text-shadow: none;
+  font-weight: 700;
+  font-size: calc(var(--u) * 24);
+}
+.hud-panel[data-era='hd'] .hud-line {
+  font-size: calc(var(--u) * 29);
+  font-weight: 700;
+}
+
+/* Anos 2070: neon */
+.hud-panel[data-era='neon'] {
+  --hud-ink: #ffe6fb;
+  --hud-accent: #ff4f7b;
+  --hud-ammo: #33e1ff;
+  --hud-font: 'Audiowide', sans-serif;
+  --hud-name-font: 'Audiowide', sans-serif;
+  background: rgba(16, 4, 34, 0.72);
+  border: calc(var(--u) * 2) solid #ff3fd2;
+  border-radius: calc(var(--u) * 14);
+  box-shadow: 0 0 calc(var(--u) * 14) rgba(255, 63, 210, 0.7), inset 0 0 calc(var(--u) * 14) rgba(255, 63, 210, 0.35);
+  text-shadow: 0 0 calc(var(--u) * 8) rgba(255, 63, 210, 0.9);
+}
+.hud-panel[data-era='neon'] .hud-deco {
+  inset: calc(var(--u) * 5);
+  border: calc(var(--u) * 1) solid rgba(51, 225, 255, 0.7);
+  border-radius: calc(var(--u) * 10);
+  box-shadow: 0 0 calc(var(--u) * 8) rgba(51, 225, 255, 0.6);
+}
+.hud-panel[data-era='neon'] .hud-name {
+  color: #7af4ff;
+  font-size: calc(var(--u) * 22);
+  text-shadow: 0 0 calc(var(--u) * 8) #33e1ff;
+}
+.hud-panel[data-era='neon'] .hud-line {
+  font-size: calc(var(--u) * 26);
+}
+.hud-panel[data-era='neon'] .hud-ammo-icons i {
+  box-shadow: 0 0 calc(var(--u) * 6) rgba(51, 225, 255, 0.9);
+}
+
+/* Era digital: painel chanfrado, linhas ciano e varredura */
+.hud-panel[data-era='tron'] {
+  --hud-ink: #c8fbff;
+  --hud-accent: #ff9a1f;
+  --hud-ammo: #00e5ff;
+  --hud-font: 'Orbitron', sans-serif;
+  --hud-name-font: 'Orbitron', sans-serif;
+  background: linear-gradient(180deg, rgba(0, 32, 46, 0.88), rgba(0, 8, 16, 0.88));
+  border-radius: 0;
+  clip-path: polygon(calc(var(--u) * 16) 0, 100% 0, 100% calc(100% - var(--u) * 16), calc(100% - var(--u) * 16) 100%, 0 100%, 0 calc(var(--u) * 16));
+  box-shadow: inset 0 0 0 calc(var(--u) * 2) #00e5ff, inset 0 0 calc(var(--u) * 18) rgba(0, 229, 255, 0.35);
+  text-shadow: 0 0 calc(var(--u) * 6) rgba(0, 229, 255, 0.8);
+}
+.hud-panel[data-era='tron'] .hud-deco {
+  background: repeating-linear-gradient(180deg, rgba(0, 229, 255, 0.08) 0 calc(var(--u) * 2), transparent calc(var(--u) * 2) calc(var(--u) * 4));
+}
+.hud-panel[data-era='tron'] .hud-name {
+  color: #ff9a1f;
+  font-size: calc(var(--u) * 20);
+  letter-spacing: calc(var(--u) * 3);
+  text-transform: uppercase;
+  text-shadow: 0 0 calc(var(--u) * 6) rgba(255, 154, 31, 0.8);
+}
+.hud-panel[data-era='tron'] .hud-line {
+  font-size: calc(var(--u) * 24);
+  font-weight: 600;
+  letter-spacing: calc(var(--u) * 1);
+}
+.hud-panel[data-era='tron'] .hud-ammo-icons i {
+  border-radius: calc(var(--u) * 1);
+  box-shadow: 0 0 calc(var(--u) * 6) rgba(0, 229, 255, 0.9);
+}
+
+/* Fim dos tempos: placa de metal enferrujada, com rebites e borda torta */
+.hud-panel[data-era='apoc'] {
+  --hud-ink: #f6d2a8;
+  --hud-accent: #ff5a2a;
+  --hud-ammo: #c87a3a;
+  --hud-font: 'Black Ops One', Impact, sans-serif;
+  --hud-name-font: 'Black Ops One', Impact, sans-serif;
+  background:
+    radial-gradient(circle at calc(var(--u) * 12) calc(var(--u) * 12), #2a1a10 calc(var(--u) * 3), transparent calc(var(--u) * 4)),
+    radial-gradient(circle at calc(100% - var(--u) * 12) calc(var(--u) * 12), #2a1a10 calc(var(--u) * 3), transparent calc(var(--u) * 4)),
+    radial-gradient(circle at calc(var(--u) * 12) calc(100% - var(--u) * 12), #2a1a10 calc(var(--u) * 3), transparent calc(var(--u) * 4)),
+    radial-gradient(circle at calc(100% - var(--u) * 12) calc(100% - var(--u) * 12), #2a1a10 calc(var(--u) * 3), transparent calc(var(--u) * 4)),
+    repeating-linear-gradient(115deg, rgba(0, 0, 0, 0.12) 0 calc(var(--u) * 3), transparent calc(var(--u) * 3) calc(var(--u) * 9)),
+    linear-gradient(160deg, #7a4a2a, #4a2c1a 60%, #6a3a22);
+  border-radius: calc(var(--u) * 3);
+  clip-path: polygon(0 5%, 7% 0, 40% 2%, 63% 0, 100% 4%, 98% 55%, 100% 100%, 72% 97%, 31% 100%, 0 96%, 2% 52%);
+  text-shadow: 0 calc(var(--u) * 2) 0 rgba(0, 0, 0, 0.65);
+}
+.hud-panel[data-era='apoc'] .hud-name {
+  color: #ffb070;
+  font-size: calc(var(--u) * 24);
+}
+.hud-panel[data-era='apoc'] .hud-line {
+  font-size: calc(var(--u) * 29);
+  letter-spacing: calc(var(--u) * 1);
+}
+
+/* ---- troca de época no painel: sai e entra com a animação da nova época */
+.hud-panel.hud-out {
+  animation: hud-out 0.24s ease forwards;
+}
+@keyframes hud-out {
+  to {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+.hud-panel.hud-in[data-era='sepia'] {
+  animation: in-sepia 0.8s ease both;
+}
+@keyframes in-sepia {
+  from {
+    opacity: 0;
+    filter: brightness(2.2) blur(3px);
+  }
+}
+.hud-panel.hud-in[data-era='bw'] {
+  animation: in-bw 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes in-bw {
+  from {
+    opacity: 0;
+    transform: rotate(-9deg) scale(1.45);
+  }
+  to {
+    transform: rotate(-1.2deg) scale(1);
+  }
+}
+.hud-panel.hud-in[data-era='tv'] {
+  animation: in-tv 0.6s ease both;
+}
+@keyframes in-tv {
+  0%,
+  35% {
+    transform: scale(1, 0.03);
+    filter: brightness(3);
+  }
+  70% {
+    transform: scale(1, 1.08);
+  }
+}
+.hud-panel.hud-in[data-era='hd'] {
+  animation: in-hd 0.55s ease both;
+}
+@keyframes in-hd {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--u) * -24)) scale(0.96);
+    filter: blur(6px);
+  }
+}
+.hud-panel.hud-in[data-era='neon'] {
+  animation: in-neon 0.75s steps(1) both;
+}
+@keyframes in-neon {
+  0% {
+    opacity: 0;
+  }
+  10%,
+  30%,
+  55%,
+  100% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0.15;
+  }
+  45% {
+    opacity: 0.4;
+  }
+}
+.hud-panel.hud-in[data-era='tron'] {
+  animation: in-tron 0.6s steps(6) both;
+}
+@keyframes in-tron {
+  0% {
+    opacity: 0;
+    transform: translateX(calc(var(--u) * -14)) skewX(20deg);
+  }
+  35% {
+    opacity: 1;
+    transform: translateX(calc(var(--u) * 10)) skewX(-12deg);
+  }
+  65% {
+    transform: translateX(calc(var(--u) * -5));
+  }
+}
+.hud-panel.hud-in[data-era='apoc'] {
+  animation: in-apoc 0.7s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+@keyframes in-apoc {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(var(--u) * -60)) rotate(6deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(calc(var(--u) * 6)) rotate(-2deg);
+  }
+  80% {
+    transform: translateY(calc(var(--u) * -2)) rotate(1deg);
+  }
 }
 
 /* ------------------------------------------------------------- Avisos */
@@ -1333,21 +1825,35 @@ input:focus-visible {
 
 /* painel e legenda em retrato */
 #stage.portrait .hud-panel {
-  top: calc(var(--u) * 34 + env(safe-area-inset-top, 0px));
-  min-width: calc(var(--u) * 380);
+  margin-top: calc(var(--u) * 34 + env(safe-area-inset-top, 0px));
+  min-width: calc(var(--u) * 390);
   padding: calc(var(--u) * 12) calc(var(--u) * 30) calc(var(--u) * 16);
 }
+#stage.portrait .hud-panel[data-era='tv'] {
+  padding-top: calc(var(--u) * 22);
+}
 #stage.portrait .hud-name {
-  font-size: calc(var(--u) * 36);
+  font-size: calc(var(--u) * 32);
 }
 #stage.portrait .hud-line {
-  font-size: calc(var(--u) * 46);
+  font-size: calc(var(--u) * 40);
 }
-#stage.portrait .hud-stop {
+#stage.portrait .hud-ammo {
+  height: calc(var(--u) * 30);
+}
+#stage.portrait .hud-ammo-icons i {
+  width: calc(var(--u) * 9);
+  height: calc(var(--u) * 24);
+}
+#stage.portrait .hud-ammo-num,
+#stage.portrait .hud-reload {
+  font-size: calc(var(--u) * 24);
+}
+#stage.portrait .hud-stop-num {
   font-size: calc(var(--u) * 38);
 }
 #stage.portrait .era-caption {
-  top: calc(var(--u) * 268 + env(safe-area-inset-top, 0px));
+  top: calc(var(--u) * 290 + env(safe-area-inset-top, 0px));
   font-size: calc(var(--u) * 48);
 }
 #stage.portrait .tools {
