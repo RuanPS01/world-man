@@ -6,7 +6,7 @@ import { Game } from './game.js';
 import { createPost } from './post.js';
 import { Input } from './input.js';
 import { Sound } from './audio.js';
-import { store, loadRanking, saveScore } from './storage.js';
+import { store, loadRanking, saveScore, formatDate } from './storage.js';
 import { clamp } from './utils.js';
 import { ERAS, mixAudio } from './eras.js';
 
@@ -40,7 +40,8 @@ const ui = {
   overTime: $('#over-time'),
   overNew: $('#over-new'),
   ranking: $('#ranking'),
-  btnSave: $('#btn-save'),
+  rankingNote: $('#ranking-note'),
+  rankingHead: $('.rk-head'),
   btnPause: $('#btn-pause'),
   btnSound: $('#btn-sound'),
   btnInstall: $('#btn-install'),
@@ -242,33 +243,60 @@ function toMenu() {
 
 function showGameOver(seconds) {
   app.lastTime = seconds;
-  app.saved = false;
-  ui.btnSave.disabled = false;
-  ui.btnSave.textContent = 'Salvar';
   ui.overTime.textContent = `${seconds}s`;
-  const list = loadRanking();
-  const best = list.length ? list[0].time : -1;
-  ui.overNew.hidden = !(seconds > best && seconds > 0);
-  renderRanking(list);
+  // o ranking é carregado e a partida é registrada automaticamente
+  const before = loadRanking();
+  const best = before.length ? before[0].time : -1;
+  let list = before;
+  let mine = null;
+  let note;
+  if (seconds > 0) {
+    const res = saveScore(app.name, seconds);
+    list = res.list;
+    mine = res.position > 0 ? res.entry : null;
+    if (!res.ok) note = 'Não foi possível salvar neste navegador (o armazenamento está bloqueado).';
+    else if (!res.position) note = `Esta partida (${seconds}s) ficou fora dos 10 melhores.`;
+    else note = 'Recordes salvos automaticamente neste aparelho.';
+  } else {
+    note = 'Partidas de 0s não entram no ranking.';
+  }
+  ui.overNew.hidden = !(seconds > 0 && seconds > best && mine);
+  renderRanking(list, mine);
+  ui.rankingNote.textContent = note;
+  if (mine) sound.play('save');
   game.enterAttract();
   vibrate(false);
   delete stage.dataset.era;
   showScreen('over');
 }
 
-function renderRanking(list, highlightDate = null) {
+/** Mostra o top 10: posição, nome, tempo e data e hora do registro. */
+function renderRanking(list, mine = null) {
   ui.ranking.textContent = '';
+  ui.rankingHead.hidden = !list.length;
   if (!list.length) {
     const li = document.createElement('li');
     li.className = 'empty';
-    li.textContent = 'Nenhum recorde salvo ainda. Use "Salvar" para guardar esta partida.';
+    li.textContent = 'Nenhum recorde ainda. Jogue uma partida e o seu tempo aparece aqui.';
     ui.ranking.appendChild(li);
     return;
   }
   list.forEach((e, i) => {
     const li = document.createElement('li');
-    li.textContent = `${i + 1}º - ${e.name} - ${e.time}s`;
-    if (highlightDate && e.date === highlightDate) li.className = 'me';
+    const cells = [
+      ['rk-pos', `${i + 1}º`],
+      ['rk-name', e.name],
+      ['rk-time', `${e.time}s`],
+      ['rk-date', formatDate(e.date)],
+    ];
+    for (const [cls, text] of cells) {
+      const span = document.createElement('span');
+      span.className = cls;
+      span.textContent = text;
+      li.appendChild(span);
+    }
+    li.title = `${i + 1}º lugar: ${e.name}, ${e.time}s, registrado em ${formatDate(e.date)}`;
+    if (mine && e.date === mine.date && e.time === mine.time) li.className = 'me';
     ui.ranking.appendChild(li);
   });
 }
@@ -308,27 +336,6 @@ click('#btn-menu', toMenu);
 click('#btn-resume', resumeGame);
 click('#btn-quit', toMenu);
 click('#btn-pause', pauseGame);
-
-click('#btn-load', () => {
-  renderRanking(loadRanking());
-  toast('Ranking carregado.');
-});
-
-click('#btn-save', () => {
-  if (app.saved) return;
-  const res = saveScore(app.name, app.lastTime);
-  if (!res.ok) {
-    toast('Não foi possível salvar neste navegador.');
-    return;
-  }
-  app.saved = true;
-  ui.btnSave.disabled = true;
-  ui.btnSave.textContent = 'Salvo';
-  const me = res.list[res.position - 1];
-  renderRanking(res.list, me ? me.date : null);
-  sound.play('save');
-  toast(res.position > 0 ? `Partida salva em ${res.position}º lugar.` : 'Partida salva, mas fora do top 10.');
-});
 
 ui.nameInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {

@@ -32,16 +32,29 @@ function sanitize(list) {
     .slice(0, MAX_ENTRIES);
 }
 
-/** Lê o ranking salvo (botão "Carregar"). */
+/** Lê o ranking salvo neste aparelho (é carregado automaticamente). */
 export function loadRanking() {
   return sanitize(store.get('ranking', []));
 }
 
-/** Salva uma partida no ranking (botão "Salvar"). Retorna { ok, list, position }. */
+/**
+ * Registra uma partida no ranking (chamado automaticamente no fim de jogo).
+ * Retorna { ok, list, position, entry }; position é 0 se ficou fora do top 10.
+ */
 export function saveScore(name, time) {
   const entry = { name: (name || 'WorldMan').slice(0, 18), time: Math.floor(time), date: Date.now() };
   const list = sanitize([...loadRanking(), entry]);
   const ok = store.set('ranking', list);
-  const position = list.findIndex((e) => e.date === entry.date) + 1;
-  return { ok, list, position };
+  const position = list.findIndex((e) => e.date === entry.date && e.time === entry.time) + 1;
+  return { ok, list, position, entry };
+}
+
+const pad = (n) => String(n).padStart(2, '0');
+
+/** Data e hora de um registro no formato "02/11/2026 15:42" (horário local). */
+export function formatDate(ms) {
+  if (!ms) return 'sem data';
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return 'sem data';
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

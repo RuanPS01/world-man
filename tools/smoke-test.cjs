@@ -96,7 +96,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await page.waitForSelector('#screen-over:not([hidden])', { timeout: 20000 });
   await sleep(500);
   await page.screenshot({ path: path.join(OUT, '08-fim.png') });
-  await page.click('#btn-save');
+  // a partida entra no ranking sozinha (sem botão Salvar)
+  await page.waitForSelector('#ranking li.me', { timeout: 5000 });
   await sleep(300);
   await page.screenshot({ path: path.join(OUT, '09-ranking.png') });
 
