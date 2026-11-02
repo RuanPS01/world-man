@@ -568,7 +568,7 @@ input:focus-visible {
 
 .ranking {
   list-style: none;
-  margin: calc(var(--u) * 12) 0 0;
+  margin: calc(var(--u) * 4) 0 0;
   padding: 0;
   font-family: var(--serif);
   font-weight: 400;
@@ -577,9 +577,49 @@ input:focus-visible {
   color: #e9b419;
 }
 
+/* tabela do ranking: posição, nome, tempo e data/hora do registro */
+.ranking li:not(.empty),
+.rk-head {
+  display: grid;
+  grid-template-columns: calc(var(--u) * 44) minmax(0, 1fr) calc(var(--u) * 70) calc(var(--u) * 190);
+  column-gap: calc(var(--u) * 16);
+  align-items: baseline;
+  max-width: calc(var(--u) * 720);
+}
+
+.rk-head {
+  margin-top: calc(var(--u) * 12);
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: calc(var(--u) * 15);
+  letter-spacing: calc(var(--u) * 1);
+  text-transform: uppercase;
+  color: rgba(233, 180, 25, 0.7);
+}
+
+.rk-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rk-time {
+  text-align: right;
+}
+
+.rk-date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
 .ranking li.me {
   color: #fff1a8;
   font-weight: 700;
+}
+
+.ranking li.me .rk-date {
+  opacity: 1;
 }
 
 .ranking .empty {
@@ -587,12 +627,12 @@ input:focus-visible {
   font-style: italic;
 }
 
-.over-actions {
-  position: absolute;
-  right: calc(var(--u) * 42);
-  top: calc(var(--u) * 282);
-  display: flex;
-  gap: calc(var(--u) * 26);
+.ranking-note {
+  margin: calc(var(--u) * 10) 0 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: calc(var(--u) * 17);
+  color: rgba(240, 210, 122, 0.85);
 }
 
 .small-btn {
@@ -1268,15 +1308,22 @@ input:focus-visible {
   font-size: calc(var(--u) * 26);
 }
 #stage.portrait .ranking {
-  margin-top: calc(var(--u) * 18);
-  font-size: calc(var(--u) * 32);
-  line-height: 1.15;
+  margin-top: calc(var(--u) * 6);
+  font-size: calc(var(--u) * 28);
+  line-height: 1.22;
 }
-#stage.portrait .over-actions {
-  position: static;
-  justify-content: flex-end;
-  margin-top: calc(var(--u) * 26);
-  gap: calc(var(--u) * 20);
+#stage.portrait .ranking li:not(.empty),
+#stage.portrait .rk-head {
+  grid-template-columns: calc(var(--u) * 50) minmax(0, 1fr) calc(var(--u) * 76) calc(var(--u) * 210);
+  column-gap: calc(var(--u) * 10);
+}
+#stage.portrait .rk-head {
+  margin-top: calc(var(--u) * 18);
+  font-size: calc(var(--u) * 20);
+}
+#stage.portrait .ranking-note {
+  font-size: calc(var(--u) * 24);
+  margin-top: calc(var(--u) * 16);
 }
 #stage.portrait .small-btn {
   min-width: calc(var(--u) * 200);
@@ -1347,10 +1394,15 @@ input:focus-visible {
   margin: 0 auto;
   padding-bottom: calc(var(--u) * 24);
 }
-#stage.compact:not(.portrait) .over-actions {
-  position: static;
-  justify-content: flex-end;
-  margin-top: calc(var(--u) * 14);
+#stage.compact:not(.portrait) .ranking li:not(.empty),
+#stage.compact:not(.portrait) .rk-head {
+  grid-template-columns: calc(var(--u) * 52) minmax(0, 1fr) calc(var(--u) * 84) calc(var(--u) * 240);
+}
+#stage.compact:not(.portrait) .rk-head {
+  font-size: calc(var(--u) * 19);
+}
+#stage.compact:not(.portrait) .ranking-note {
+  font-size: calc(var(--u) * 21);
 }
 #stage.compact:not(.portrait) .band-buttons {
   position: relative;

@@ -32,7 +32,7 @@ O jogo se adapta ao tamanho e à orientação da tela, no computador e no celula
 - **Planeta-relógio**: o núcleo do planeta tem o mostrador gravado (marcas dos minutos e numerais) e três ponteiros clássicos pretos giram a partir do centro: o das horas (com ponta de espada, mais lento, vem de frente), o dos minutos (com anel) e o dos segundos (fino, o mais rápido). Os dois últimos chegam por trás. A ponta de cada ponteiro sempre fica acima do chão: se passar pelo personagem enquanto ele está no chão, o jogo acaba. Um tique-taque avisa quando um ponteiro está chegando e um alerta pisca na borda esquerda quando ele vem por trás. Nas épocas futuristas o tempo às vezes corre ao contrário e um ponteiro inverte o sentido.
 - **Paradas**: você começa com 20. Cada parada segura o personagem por até 2 segundos (o tempo restante aparece em vermelho no painel) e a tela treme enquanto você segura. No Android o aparelho também vibra. Servem para deixar um foguete decolar ou uma bomba cair na sua frente.
 - **Tiro teleguiado**: as balas perseguem o inimigo mais próximo.
-- **Ranking**: na tela de fim de jogo, **Salvar** guarda a partida no top 10 e **Carregar** relê o ranking salvo neste navegador.
+- **Ranking**: cada partida entra sozinha no top 10 ao terminar, e o ranking é carregado sozinho na tela de fim de jogo. Cada registro mostra posição, nome, tempo e a data e a hora (com minutos) em que foi feito. Os recordes ficam guardados neste aparelho.
 
 ### As épocas
 
@@ -141,5 +141,5 @@ Algumas regras não aparecem com clareza nas gravações e foram interpretadas:
 
 - A morte nos vídeos acontece quando um ponteiro alcança o personagem no chão; pular por cima evita.
 - O "2s" vermelho aparece durante a parada; aqui ele mostra o tempo restante da parada (máximo de 2 segundos).
-- "Salvar" e "Carregar" usam o armazenamento local do navegador.
+- O ranking usa o armazenamento local do navegador (fica em cada aparelho).
 - A arte e os efeitos sonoros foram recriados por código, inspirados no visual das capturas.
