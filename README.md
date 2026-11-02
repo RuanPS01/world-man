@@ -76,7 +76,7 @@ A publicação é automática pelo GitHub Actions (`.github/workflows/pages.yml`
 - **Pull request para a `main`**: só verifica, sem publicar. Se algo estiver errado, o PR mostra a falha.
 - **Manual**: aba *Actions*, fluxo **Publicar no GitHub Pages**, botão *Run workflow* (a partir da `main`).
 
-Antes da primeira publicação, uma configuração única no repositório: em *Settings > Pages > Build and deployment*, escolha **GitHub Actions** como *Source*. Depois disso o jogo fica em <https://ruanps01.github.io/world-man/> e o endereço também aparece no resumo de cada execução do fluxo.
+Antes da primeira publicação, uma configuração única no repositório: em *Settings > Pages > Build and deployment*, escolha **GitHub Actions** como *Source*. Depois disso o jogo fica em <https://ruanps.com.br/world-man/> (o endereço <https://ruanps01.github.io/world-man/> redireciona para lá, porque a conta usa domínio próprio no GitHub Pages) e o endereço também aparece no resumo de cada execução do fluxo.
 
 O que a pipeline faz:
 
