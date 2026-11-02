@@ -2,7 +2,7 @@
 // épocas e renderização da cena.
 
 import { PLANET, PLAYER, BULLET } from './config.js';
-import { ERAS, difficulty, mixPost } from './eras.js';
+import { ERAS, ERA_DURATION, difficulty, mixPost } from './eras.js';
 import { World } from './world.js';
 import { drawPlayer } from './sprites.js';
 import { FOES, Floater, Rocket, Faller, spawnFoe } from './enemies.js';
@@ -12,6 +12,16 @@ const R = PLANET.R;
 
 /** Altura da ponta dos ponteiros acima do chão (sempre um obstáculo para pular). */
 export const HAND_TIP = 28;
+
+/**
+ * Intervalo mínimo (s) entre duas ameaças que o jogador precisa pular ou
+ * derrubar: dá tempo de pousar, ver a próxima e reagir.
+ */
+const SAFE_GAP = 1.05;
+/** Ponteiros que passam quase juntos (um pulo só cobre os dois) não contam como conflito. */
+const SAME_JUMP = 0.22;
+/** Rapidez com que um ponteiro troca de velocidade. */
+const HAND_DAMP = 1.8;
 
 /** Ponteiros: hora (lento, vem de frente), minuto e segundo (rápidos, vêm de trás). */
 const HANDS = {
@@ -193,13 +203,152 @@ export class Game {
   }
 
   pickHandMotion(n, initial = false) {
-    const mult = (this.diff ? this.diff.hands : 1) * rand(0.85, 1.15);
-    let rel = HANDS[n.style].rel * mult;
     const d = wrapAngle(n.a - this.player.a);
-    // nas épocas futuristas o tempo às vezes corre ao contrário (só longe do jogador)
-    if (!initial && this.era >= 4 && Math.abs(d) > 0.9 && chance(0.2)) rel = -rel;
-    n.rel = rel;
+    const candidate = () => {
+      let rel = HANDS[n.style].rel * (this.diff ? this.diff.hands : 1) * rand(0.85, 1.15);
+      // nas épocas futuristas o tempo às vezes corre ao contrário (só longe do jogador)
+      if (!initial && this.era >= 4 && Math.abs(d) > 0.9 && chance(0.2)) rel = -rel;
+      return rel;
+    };
     n.timer = rand(3, 6);
+    if (initial) {
+      n.rel = candidate();
+      return;
+    }
+    // escolhe um ritmo cuja próxima passagem não caia em cima de outra ameaça
+    const others = this.threatTimes(null, n);
+    for (let i = 0; i < 6; i++) {
+      const rel = candidate();
+      const t = this.handCrossTime(n, rel);
+      if (!this.conflicts(t, others, true)) {
+        n.rel = rel;
+        return;
+      }
+    }
+    // sem opção boa: mantém o ritmo atual
+  }
+
+  // ---------------------------------------------------------- Agenda das ameaças
+
+  /**
+   * Em quantos segundos o ponteiro `n` passa pelo jogador, se for para o ritmo
+   * `rel`. A velocidade muda aos poucos (amortecida), então a conta simula isso.
+   */
+  handCrossTime(n, rel = n.rel) {
+    const d0 = wrapAngle(n.a - this.player.a);
+    const r0 = n.w - this.runOmega;
+    const k = HAND_DAMP;
+    let prev = d0;
+    for (let t = 0.04; t <= 7; t += 0.04) {
+      const d = d0 + rel * t + ((r0 - rel) * (1 - Math.exp(-k * t))) / k;
+      if (Math.sign(d) !== Math.sign(prev) && Math.abs(d) < 1) return t;
+      prev = d;
+    }
+    return Infinity;
+  }
+
+  /** Menor ângulo à frente que fica fora da tela (com folga). */
+  offscreenAhead() {
+    const halfW = (this.viewport.w / 2) * 1.18;
+    return Math.asin(clamp(halfW / R, 0, 0.99)) + 0.12;
+  }
+
+  /** É uma ameaça que chega ao jogador pelo chão (pular ou derrubar)? */
+  isGroundThreat(e) {
+    return e.kind === 'obstacle' || e.kind === 'skimmer' || e.kind === 'hunter' || (e.kind === 'bomb' && e.fkind === 'debris');
+  }
+
+  /**
+   * Em quantos segundos a ameaça `e` alcança o jogador correndo normalmente
+   * (ou null). Considera o aumento de velocidade da próxima época.
+   */
+  groundTime(e) {
+    const om = this.runOmega;
+    const own = e.kind === 'obstacle' || e.kind === 'bomb' ? 0 : e.wa || 0;
+    let d;
+    if (e.kind === 'bomb') d = wrapAngle(e.landing().a - this.player.a);
+    else d = wrapAngle(e.a - this.player.a);
+    if (d <= 0) return null;
+    const c0 = om - own;
+    if (c0 <= 0) return null;
+    const tNext = (Math.floor(this.time / ERA_DURATION) + 1) * ERA_DURATION - this.time;
+    const t0 = d / c0;
+    if (t0 <= tNext) return t0;
+    const om1 = (PLAYER.runSpeed * difficulty(this.time + tNext + 0.01).speed) / R;
+    return tNext + (d - c0 * tNext) / (om1 - own);
+  }
+
+  /** Momentos previstos das próximas passagens de ponteiros e chegadas de ameaças. */
+  threatTimes(exceptEnemy = null, exceptHand = null) {
+    const out = [];
+    for (const n of this.hands) {
+      if (n === exceptHand) continue;
+      const t = n.tp ?? this.handCrossTime(n);
+      if (Number.isFinite(t)) out.push({ t, hand: true });
+    }
+    for (const e of this.enemies) {
+      if (e === exceptEnemy || !e.alive || !this.isGroundThreat(e)) continue;
+      const t = this.groundTime(e);
+      if (t !== null) out.push({ t, hand: false });
+    }
+    return out;
+  }
+
+  /** Há outra ameaça perto demais do momento `t`? */
+  conflicts(t, list, isHand = false) {
+    if (!Number.isFinite(t)) return false;
+    return list.some((o) => {
+      const gap = Math.abs(o.t - t);
+      if (isHand && o.hand && gap < SAME_JUMP) return false;
+      return gap < SAFE_GAP;
+    });
+  }
+
+  /**
+   * Ameaças de chão que ainda estão fora da tela são empurradas para a frente
+   * se a chegada delas ficou perto demais de um ponteiro ou de outra ameaça.
+   */
+  keepThreatsApart() {
+    const p = this.player;
+    const edge = this.offscreenAhead() - 0.06;
+    for (const e of this.enemies) {
+      if (!e.alive || !this.isGroundThreat(e) || e.kind === 'bomb') continue;
+      const d = wrapAngle(e.a - p.a);
+      if (d < edge) continue;
+      const t = this.groundTime(e);
+      if (t === null) continue;
+      const clash = this.threatTimes(e).find((o) => Math.abs(o.t - t) < SAFE_GAP);
+      if (!clash) continue;
+      // empurra o suficiente para chegar SAFE_GAP depois da ameaça que conflita
+      const closing = this.runOmega - (e.kind === 'obstacle' ? 0 : e.wa || 0);
+      e.a += (clash.t + SAFE_GAP - t + 0.05) * closing;
+      e.pushed = (e.pushed || 0) + 1;
+      if (e.pushed > 6) e.alive = false;
+    }
+  }
+
+  /**
+   * Última garantia: se a passagem prevista de um ponteiro cair colada na
+   * chegada de uma ameaça de chão, o ponteiro acelera ou freia de leve
+   * (até 30%) para abrir espaço. A mudança é suave e quase imperceptível.
+   */
+  nudgeHands(dt) {
+    this.nudgeT = (this.nudgeT || 0) - dt;
+    if (this.nudgeT > 0) return;
+    this.nudgeT = 0.1;
+    const ground = this.threatTimes().filter((o) => !o.hand);
+    if (!ground.length) return;
+    for (const n of this.hands) {
+      if (!(n.tp > 0.35 && n.tp < 5) || !this.conflicts(n.tp, ground)) continue;
+      const base = n.rel;
+      for (const f of [1.1, 0.9, 1.2, 0.8, 1.3, 0.72]) {
+        const rel = base * f;
+        if (!this.conflicts(this.handCrossTime(n, rel), ground)) {
+          n.rel = rel;
+          break;
+        }
+      }
+    }
   }
 
   // ---------------------------------------------------------- Atualização
@@ -354,6 +503,8 @@ export class Game {
 
     this.updateHands(dt);
     this.updateEnemies(dt);
+    this.keepThreatsApart();
+    this.nudgeHands(dt);
     this.updateBullets(dt);
     this.updateParticles(dt);
     this.updateSpawner(dt);
@@ -380,8 +531,8 @@ export class Game {
     const om = p.speed / R;
     for (const n of this.hands) {
       n.timer -= dt;
-      if (n.timer <= 0) this.pickHandMotion(n);
-      n.w = damp(n.w, this.runOmega + n.rel, 1.8, dt);
+      if (n.timer <= 0 && !(n.tp < 2.6)) this.pickHandMotion(n);
+      n.w = damp(n.w, this.runOmega + n.rel, HAND_DAMP, dt);
       n.a += n.w * dt;
 
       const d = wrapAngle(n.a - p.a);
@@ -400,6 +551,7 @@ export class Game {
         this.sfx(n.style === 'second' ? 'tick' : 'tock');
       }
       if (tc > 0.9) n.ticked = false;
+      n.tp = this.handCrossTime(n);
     }
   }
 
@@ -442,8 +594,22 @@ export class Game {
   spawnEnemy() {
     const pool = ERAS[this.era].foes;
     const [type, opts] = weighted(pool.map(([t, w, o]) => [[t, o || {}], w]));
-    const e = spawnFoe(this, type, opts);
-    if (e) this.enemies.push(e);
+    const e = spawnFoe(this, type, opts, this.offscreenAhead());
+    if (!e) return;
+    if (this.isGroundThreat(e)) {
+      const others = this.threatTimes(e);
+      const base = e.a;
+      let ok = false;
+      for (let k = 0; k < 10 && !ok; k++) {
+        if (e.kind !== 'bomb') e.a = base + k * 0.07;
+        const t = this.groundTime(e);
+        ok = t === null || !this.conflicts(t, others);
+        if (e.kind === 'bomb') break;
+      }
+      // sem espaço livre agora: tenta de novo no próximo ciclo
+      if (!ok) return;
+    }
+    this.enemies.push(e);
   }
 
   fire() {
@@ -820,6 +986,7 @@ export class Game {
     lc.save();
     this.applyCamera(lc);
     if (play) {
+      this.drawObstacleMarkers(lc);
       for (const n of this.hands) this.drawHand(lc, n);
       if (bolt !== 'dark') this.drawBullets(lc, bolt);
       this.drawMuzzle(lc);
@@ -977,6 +1144,23 @@ export class Game {
       if (n.d > -0.32 || n.tc > 0.95) continue;
       const { x, y } = this.edgePoint(-1, w, 22);
       this.warnIcon(ctx, x, y, 'rgba(16,16,18,0.92)');
+    }
+  }
+
+  /** Sinal "!" piscando sobre obstáculos de chão à frente (para não confundir com o cenário). */
+  drawObstacleMarkers(ctx) {
+    const p = this.player;
+    if (!p.alive) return;
+    for (const e of this.enemies) {
+      if (!e.alive || e.kind !== 'obstacle') continue;
+      const d = wrapAngle(e.a - p.a);
+      if (d < -0.01 || d > 0.85) continue;
+      ctx.save();
+      ctx.rotate(e.a + Math.PI / 2);
+      ctx.translate(0, -(R + e.cfg.height + 24 + Math.sin(this.time * 7) * 3));
+      ctx.scale(0.62, 0.62);
+      this.warnIcon(ctx, 0, 0, 'rgba(214,43,30,0.95)');
+      ctx.restore();
     }
   }
 
