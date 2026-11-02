@@ -42,7 +42,9 @@ export const PLAYER = {
   height: 52,
   stops: 20, // "Paradas"
   stopMax: 2, // duração máxima de cada parada (s)
-  fireCooldown: 0.17,
+  fireCooldown: 0.09, // intervalo mínimo entre dois toques de tiro (s)
+  magSize: 10, // balas por pente
+  reloadTime: 3, // recarga depois que o pente acaba (s)
 };
 
 export const BULLET = {

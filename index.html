@@ -40,11 +40,23 @@
 
       <!-- HUD -->
       <div id="hud" class="hud" hidden>
-        <div class="hud-panel">
+        <div class="hud-panel" id="hud-panel" data-era="sepia">
+          <div class="hud-deco" aria-hidden="true"></div>
           <div class="hud-name" id="hud-name">WorldMan</div>
-          <div class="hud-line" id="hud-stops-line">Paradas <span id="hud-stops">20</span>x</div>
-          <div class="hud-line">Tempo: <span id="hud-time">0</span>s</div>
-          <div class="hud-stop" id="hud-stop" aria-live="polite"></div>
+          <div class="hud-line" id="hud-stops-line">Paradas <span class="hud-num" id="hud-stops">20</span>x</div>
+          <div class="hud-line">Tempo: <span class="hud-num" id="hud-time">0</span>s</div>
+          <div class="hud-ammo" id="hud-ammo" aria-label="Balas no pente">
+            <span class="hud-ammo-icons" id="hud-ammo-icons"></span>
+            <span class="hud-ammo-num" id="hud-ammo-num">10</span>
+            <span class="hud-reload" aria-hidden="true">
+              <span class="hud-reload-label">Recarregando</span>
+              <span class="hud-reload-bar"><i id="hud-reload-fill"></i></span>
+            </span>
+          </div>
+          <div class="hud-stop" id="hud-stop" hidden>
+            <span class="hud-stop-num" id="hud-stop-num">2,000s</span>
+            <span class="hud-stop-bar"><i id="hud-stop-fill"></i></span>
+          </div>
         </div>
       </div>
 
@@ -53,6 +65,7 @@
         <div class="tbtn tbtn-shoot" data-action="shoot" aria-label="Atirar">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle class="stroke" cx="12" cy="12" r="6.5" /><path class="stroke" d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5" /></svg>
           <span>Atirar</span>
+          <b class="tbtn-count" id="touch-ammo">10</b>
         </div>
         <div class="tbtn tbtn-stop" data-action="stop" aria-label="Parar">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" /></svg>
@@ -79,7 +92,7 @@
               <input id="name-input" type="text" maxlength="14" autocomplete="off" autocapitalize="off" spellcheck="false" value="WorldMan" enterkeyhint="go" />
             </div>
             <button id="btn-install" class="small-btn np-install" hidden>Instalar app</button>
-            <div class="np-version">Beta 1.0</div>
+            <div class="np-version">Beta 2.0</div>
           </div>
           <p class="portrait-tip">Dica: com o celular na horizontal você enxerga mais do mundo.</p>
         </div>
@@ -108,7 +121,7 @@
               </li>
             </ul>
             <p class="obs">Obs.: O personagem se move para frente automaticamente no mundo e as balas da arma perseguem o inimigo.</p>
-            <p class="obs obs-small">O planeta é um relógio: pule os ponteiros quando passarem (o tique-taque avisa). Você tem 20 paradas de até 2 segundos. O tempo atravessa as épocas, do cinema antigo ao fim do mundo, e cada uma traz novos inimigos.<span class="only-keys"> Também valem W ou Espaço (pula), A (para), J (atira) e P (pausa).</span><span class="only-touch"> Pular fica à direita (tocar em qualquer ponto livre da metade direita também pula); Atirar e Parar ficam à esquerda, e dá para deslizar o dedo entre eles.</span></p>
+            <p class="obs obs-small">O planeta é um relógio: pule os ponteiros quando passarem (o tique-taque avisa). Você tem 20 paradas de até 2 segundos. Cada toque dispara um tiro; o pente tem 10 balas e recarrega em 3 segundos quando acaba. O tempo atravessa as épocas, do cinema antigo ao fim do mundo, e cada uma traz novos inimigos.<span class="only-keys"> Também valem W ou Espaço (pula), A (para), J (atira) e P (pausa).</span><span class="only-touch"> Pular fica à direita (tocar em qualquer ponto livre da metade direita também pula); Atirar e Parar ficam à esquerda, e dá para deslizar o dedo entre eles.</span></p>
           </div>
         </div>
         <div class="frame band-buttons">
@@ -126,7 +139,7 @@
               <li>Recriação para a web: HTML5 Canvas, WebGL e PWA</li>
               <li>Música: "Mundo Pequeno", trilha original de RuanPS01</li>
               <li>Arte e efeitos sonoros gerados por código</li>
-              <li>Fontes: Cinzel, Cinzel Decorative e Crimson Text (SIL Open Font License)</li>
+              <li>Fontes: Cinzel, Cinzel Decorative, Crimson Text, Righteous, Audiowide, Orbitron e Black Ops One (SIL Open Font License) e Special Elite (Apache License 2.0)</li>
             </ul>
           </div>
         </div>

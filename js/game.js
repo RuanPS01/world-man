@@ -20,6 +20,15 @@ export const HAND_TIP = 28;
 const SAFE_GAP = 1.05;
 /** Ponteiros que passam quase juntos (um pulo só cobre os dois) não contam como conflito. */
 const SAME_JUMP = 0.22;
+/** Duração do clarão do tiro (s). */
+const MUZZLE_TIME = 0.085;
+
+/** Cores da bala por estilo de época (projétil + rastro). */
+const BULLET_LOOKS = {
+  dark: { light: '#ffe2b0', mid: '#c97f3c', dark: '#6b3a15', base: '#4a2a10', trail: 'rgba(255,240,210,0.42)', trailW: 2.2 },
+  pink: { light: '#ffffff', mid: '#cfc8ee', dark: '#55467a', base: '#ff3fd2', trail: 'rgba(255,63,210,0.7)', trailW: 5 },
+  cyan: { light: '#eaffff', mid: '#86aab9', dark: '#18283a', base: '#00e5ff', trail: 'rgba(0,229,255,0.7)', trailW: 5 },
+};
 /** Rapidez com que um ponteiro troca de velocidade. */
 const HAND_DAMP = 1.8;
 
@@ -167,6 +176,10 @@ export class Game {
       stopLatch: false,
       stops: PLAYER.stops,
       fireCd: 0,
+      fireBuf: 0,
+      ammo: PLAYER.magSize,
+      reload: 0,
+      flashSeed: 0.5,
       phase: 0,
       flash: 0,
       blinkT: 2.5,
@@ -488,12 +501,33 @@ export class Game {
       }
     }
 
-    // ---- tiro (X)
+    // ---- tiro (X): um tiro por toque (segurar não repete), pente de 10 balas
+    //      e 3 s de recarga só depois que o pente acaba
     p.fireCd -= dt;
-    if (input.held.shoot && p.fireCd <= 0) {
-      this.fire();
-      p.fireCd = PLAYER.fireCooldown;
+    if (p.reload > 0) {
+      p.reload -= dt;
+      if (p.reload <= 0) {
+        p.reload = 0;
+        p.ammo = PLAYER.magSize;
+        this.sfx('ready');
+      }
     }
+    if (first && input.pressed.shoot) p.fireBuf = 0.12;
+    if (p.fireBuf > 0 && p.fireCd <= 0) {
+      p.fireBuf = 0;
+      if (p.reload > 0 || p.ammo <= 0) {
+        this.sfx('empty');
+      } else {
+        this.fire();
+        p.ammo -= 1;
+        p.fireCd = PLAYER.fireCooldown;
+        if (p.ammo === 0) {
+          p.reload = PLAYER.reloadTime;
+          this.sfx('reload');
+        }
+      }
+    }
+    p.fireBuf -= dt;
     p.flash = Math.max(0, p.flash - dt);
     p.blinkT -= dt;
     if (p.blinkT <= 0) {
@@ -629,7 +663,36 @@ export class Game {
       target: null,
       dead: false,
     });
-    p.flash = 0.07;
+    p.flash = MUZZLE_TIME;
+    p.flashSeed = Math.random();
+    // faíscas para a frente e um sopro de fumaça na boca do cano
+    for (let i = 0; i < 4; i++) {
+      const ang = Math.atan2(ty, tx) + rand(-0.45, 0.45);
+      const v = rand(260, 520);
+      this.addParticle({
+        kind: 'spark',
+        x: m.x,
+        y: m.y,
+        vx: Math.cos(ang) * v,
+        vy: Math.sin(ang) * v,
+        life: rand(0.08, 0.16),
+        max: 0.16,
+        size: rand(1.4, 2.4),
+        color: pick(['#fff6c8', '#ffd23f', '#ffb22e']),
+      });
+    }
+    this.addParticle({
+      kind: 'smoke',
+      x: m.x + tx * 8,
+      y: m.y + ty * 8,
+      vx: tx * 40 + ox * 25,
+      vy: ty * 40 + oy * 25,
+      life: 0.45,
+      max: 0.45,
+      size: 4,
+      grow: 16,
+      color: '215,215,215',
+    });
     this.sfx('shoot');
   }
 
@@ -884,10 +947,17 @@ export class Game {
     const hud = {
       stops: p.stops,
       time: Math.floor(this.time),
-      stopLeft: p.stopped ? Math.ceil(p.stopLeft - 1e-6) : 0,
+      // contagem da parada com milissegundos
+      stopLeft: p.stopped ? Math.max(0, Math.round(p.stopLeft * 1000) / 1000) : 0,
+      stopMax: PLAYER.stopMax,
       noStops: p.noStopsT > 0,
+      ammo: p.ammo,
+      mag: PLAYER.magSize,
+      reloading: p.reload > 0,
+      // progresso da recarga, de 0 a 1
+      reload: p.reload > 0 ? Math.round((1 - p.reload / PLAYER.reloadTime) * 100) / 100 : 1,
     };
-    const key = `${hud.stops}|${hud.time}|${hud.stopLeft}|${hud.noStops}`;
+    const key = `${hud.stops}|${hud.time}|${hud.stopLeft}|${hud.noStops}|${hud.ammo}|${hud.reload}`;
     if (key !== this.hudCache) {
       this.hudCache = key;
       this.hooks.onHud?.(hud);
@@ -1024,21 +1094,66 @@ export class Game {
     ctx.restore();
   }
 
+  /**
+   * Clarão do tiro em camadas: brilho em volta, chama em cone para a frente
+   * com pontas irregulares, duas labaredas laterais e um núcleo branco.
+   */
   drawMuzzle(ctx) {
     const p = this.player;
     if (p.flash <= 0 || !p.alive) return;
+    const k = clamp(p.flash / MUZZLE_TIME, 0, 1);
+    const s = p.flashSeed;
     ctx.save();
     ctx.rotate(p.a + Math.PI / 2);
-    ctx.translate(27, -(R + p.h + 25));
-    ctx.fillStyle = '#ffe56a';
+    ctx.translate(26, -(R + p.h + 25));
+
+    const glowR = 16 + 10 * k;
+    const g = ctx.createRadialGradient(5, 0, 0, 5, 0, glowR);
+    g.addColorStop(0, `rgba(255,236,170,${0.75 * k})`);
+    g.addColorStop(0.5, `rgba(255,180,60,${0.3 * k})`);
+    g.addColorStop(1, 'rgba(255,150,40,0)');
+    ctx.fillStyle = g;
     ctx.beginPath();
-    for (let i = 0; i < 10; i++) {
-      const r = i % 2 ? 3 : 8;
-      const ang = (i / 10) * TAU;
-      ctx.lineTo(Math.cos(ang) * r + 3, Math.sin(ang) * r * 0.7);
-    }
+    ctx.arc(5, 0, glowR, 0, TAU);
+    ctx.fill();
+
+    const len = 13 + 11 * k + s * 6;
+    const w = 4.2 + 2.2 * k;
+    const fg = ctx.createLinearGradient(0, 0, len, 0);
+    fg.addColorStop(0, '#fffdf0');
+    fg.addColorStop(0.3, '#ffe36a');
+    fg.addColorStop(0.7, '#ff9a2a');
+    fg.addColorStop(1, 'rgba(255,90,20,0)');
+    ctx.globalAlpha = 0.35 + 0.65 * k;
+    ctx.fillStyle = fg;
+    ctx.beginPath();
+    ctx.moveTo(0, -w * 0.7);
+    ctx.lineTo(len * (0.35 + s * 0.1), -w);
+    ctx.lineTo(len * 0.62, -w * 0.45);
+    ctx.lineTo(len, 0);
+    ctx.lineTo(len * 0.62, w * 0.45);
+    ctx.lineTo(len * (0.45 - s * 0.1), w);
+    ctx.lineTo(0, w * 0.7);
     ctx.closePath();
     ctx.fill();
+
+    ctx.fillStyle = '#ffc84a';
+    for (const side of [-1, 1]) {
+      const sl = 7 + 5 * k + (side > 0 ? s : 1 - s) * 4;
+      ctx.beginPath();
+      ctx.moveTo(1.5, side * 1.2);
+      ctx.lineTo(sl * 0.75, side * (sl * 0.75));
+      ctx.lineTo(4.5, side * 0.4);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = k;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.ellipse(2.5, 0, 4.2 * (0.6 + 0.4 * k), 2.6 * (0.6 + 0.4 * k), 0, 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
 
@@ -1065,24 +1180,43 @@ export class Game {
     ctx.restore();
   }
 
+  /**
+   * Bala com formato de projétil de verdade (mesmo tamanho de antes: cerca de
+   * 13 x 5): camisa metálica com ponta ogival, base e canelura, mais o rastro.
+   */
   drawBullets(ctx, style) {
-    const col = style === 'pink' ? '#ff6ae6' : style === 'cyan' ? '#7af4ff' : '#262626';
+    const look = BULLET_LOOKS[style] || BULLET_LOOKS.dark;
     for (const b of this.bullets) {
       const ang = Math.atan2(b.vy, b.vx);
       ctx.save();
       ctx.translate(b.x, b.y);
       ctx.rotate(ang);
-      if (style === 'dark') {
-        ctx.fillStyle = 'rgba(255,255,255,0.28)';
-        ctx.fillRect(-22, -1, 18, 2);
-      } else {
-        ctx.fillStyle = style === 'pink' ? 'rgba(255,63,210,0.35)' : 'rgba(0,229,255,0.35)';
-        ctx.fillRect(-30, -3, 34, 6);
-      }
-      ctx.fillStyle = col;
+      const tg = ctx.createLinearGradient(-36, 0, -5, 0);
+      tg.addColorStop(0, 'rgba(255,255,255,0)');
+      tg.addColorStop(1, look.trail);
+      ctx.fillStyle = tg;
+      ctx.fillRect(-36, -look.trailW / 2, 31, look.trailW);
+
+      const body = ctx.createLinearGradient(0, -2.4, 0, 2.4);
+      body.addColorStop(0, look.light);
+      body.addColorStop(0.45, look.mid);
+      body.addColorStop(1, look.dark);
+      ctx.fillStyle = body;
       ctx.beginPath();
-      ctx.ellipse(0, 0, 6.5, 2.4, 0, 0, TAU);
+      ctx.moveTo(-6.5, -2.1);
+      ctx.lineTo(0.4, -2.4);
+      ctx.bezierCurveTo(3.6, -2.4, 5.9, -1.15, 6.6, 0);
+      ctx.bezierCurveTo(5.9, 1.15, 3.6, 2.4, 0.4, 2.4);
+      ctx.lineTo(-6.5, 2.1);
+      ctx.quadraticCurveTo(-7.1, 0, -6.5, -2.1);
+      ctx.closePath();
       ctx.fill();
+      ctx.fillStyle = look.base;
+      ctx.fillRect(-6.6, -2.1, 1.5, 4.2);
+      ctx.fillStyle = 'rgba(0,0,0,0.32)';
+      ctx.fillRect(-2.4, -2.35, 0.9, 4.7);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fillRect(-5, -1.75, 7.2, 0.75);
       ctx.restore();
     }
   }

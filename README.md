@@ -10,7 +10,7 @@ Esta é uma recriação para a web (PWA) do protótipo original feito no Constru
 | --- | --- | --- |
 | Pular | Seta para cima, W ou Espaço | botão **Pular** |
 | Parar de correr | Seta para a esquerda ou A (segure) | botão **Parar** (segure) |
-| Atirar | X ou J (segure para rajada) | botão **Atirar** |
+| Atirar | X ou J (um tiro por toque) | botão **Atirar** |
 | Pausar | P ou Esc | botão de pausa no canto |
 
 Também funciona com controle (gamepad): A pula, B para, X atira, Start pausa.
@@ -30,8 +30,9 @@ O jogo se adapta ao tamanho e à orientação da tela, no computador e no celula
 
 - **Corrida automática**: o mundo gira sob o personagem o tempo todo.
 - **Planeta-relógio**: o núcleo do planeta tem o mostrador gravado (marcas dos minutos e numerais) e três ponteiros clássicos pretos giram a partir do centro: o das horas (com ponta de espada, mais lento, vem de frente), o dos minutos (com anel) e o dos segundos (fino, o mais rápido). Os dois últimos chegam por trás. A ponta de cada ponteiro sempre fica acima do chão: se passar pelo personagem enquanto ele está no chão, o jogo acaba. Um tique-taque avisa quando um ponteiro está chegando e um alerta pisca na borda esquerda quando ele vem por trás. Nas épocas futuristas o tempo às vezes corre ao contrário e um ponteiro inverte o sentido.
-- **Paradas**: você começa com 20. Cada parada segura o personagem por até 2 segundos (o tempo restante aparece em vermelho no painel) e a tela treme enquanto você segura. No Android o aparelho também vibra. Servem para deixar um foguete decolar ou uma bomba cair na sua frente.
-- **Tiro teleguiado**: as balas perseguem o inimigo mais próximo.
+- **Paradas**: você começa com 20. Cada parada segura o personagem por até 2 segundos (o tempo restante aparece no painel com milissegundos, junto de uma barra que esvazia e pisca nos últimos instantes) e a tela treme enquanto você segura. No Android o aparelho também vibra. Servem para deixar um foguete decolar ou uma bomba cair na sua frente.
+- **Tiro teleguiado**: as balas perseguem o inimigo mais próximo. Cada toque dispara um tiro só: segurar o botão não faz rajada, é preciso apertar de novo. O pente tem 10 balas e, quando acaba, a arma recarrega por 3 segundos antes de voltar a atirar. O painel mostra as balas que restam (os últimos três piscam) e a barra de recarga; no celular, o número aparece no próprio botão **Atirar**, que se enche enquanto recarrega.
+- **Painel da partida**: nome, paradas, tempo, balas e contagem da parada ficam num painel que muda com a época, com fonte e moldura próprias (pergaminho no sépia, ficha datilografada nos anos 1940, painel listrado nos anos 1970, vidro fosco em alta definição, neon, painel digital chanfrado e placa enferrujada no fim dos tempos). A cada troca de época o painel sai e volta com uma animação no estilo da nova época.
 - **Ranking**: cada partida entra sozinha no top 10 ao terminar, e o ranking é carregado sozinho na tela de fim de jogo. Cada registro mostra posição, nome, tempo e a data e a hora (com minutos) em que foi feito. Os recordes ficam guardados neste aparelho.
 
 ### As épocas
@@ -111,7 +112,7 @@ js/storage.js           nome, ranking e preferências (localStorage)
 sw.js                   service worker (cache offline)
 manifest.webmanifest    manifesto do PWA
 assets/audio            trilha "Mundo Pequeno"
-assets/fonts            Cinzel, Cinzel Decorative e Crimson Text (SIL OFL)
+assets/fonts            Cinzel, Cinzel Decorative, Crimson Text, Righteous, Audiowide, Orbitron, Black Ops One (SIL OFL) e Special Elite (Apache 2.0)
 assets/icons            ícones do app
 tools/                  servidor local, verificação e montagem do site, ícones e testes automatizados
 .github/workflows       publicação no GitHub Pages
