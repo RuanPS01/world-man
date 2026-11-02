@@ -41,7 +41,7 @@ A cada 20 segundos o tempo avança para uma nova época. A mudança é gradual: 
 
 | Tempo | Época | Visual | Inimigos e obstáculos |
 | --- | --- | --- | --- |
-| 0 s | Anos 1900 | sépia com grão, riscos e trepidação de filme antigo; moinhos e casinhas | balões, zepelins (sacos de areia), biplanos |
+| 0 s | Anos 1900 | sépia com grão, riscos e cintilação de filme antigo (sem pontos de poeira); moinhos e casinhas | balões, zepelins (sacos de areia), biplanos |
 | 20 s | Anos 1940 | preto e branco; celeiros, fábricas, postes de telégrafo | caças e zepelins com bombas, barricadas de sacos de areia |
 | 40 s | Anos 1970 | colorido com efeito de TV de tubo (linhas, aberração de cor, cantos arredondados) | foguetes, mísseis rasantes, discos voadores |
 | 60 s | Anos 2020 | alta definição, cores vivas e brilho; prédios de vidro e turbinas eólicas | helicópteros, drones, mísseis, barreiras de rua |

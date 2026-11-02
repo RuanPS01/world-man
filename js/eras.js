@@ -25,7 +25,8 @@ const NO_POST = {
   gray: 0,
   sepia: 0,
   grain: 0,
-  scratch: 0,
+  scratch: 0, // riscos verticais do filme
+  dust: 0, // pontinhos pretos de poeira do filme
   flicker: 0,
   jitter: 0,
   scan: 0,
@@ -56,6 +57,7 @@ export const ERAS = [
       sepia: 1,
       grain: 0.17,
       scratch: 1,
+      dust: 0, // sem pontos pretos nos anos 1900 (só grão e riscos)
       flicker: 0.08,
       jitter: 0,
       contrast: 1.08,
@@ -90,6 +92,7 @@ export const ERAS = [
       gray: 1,
       grain: 0.12,
       scratch: 0.45,
+      dust: 0.45,
       flicker: 0.05,
       jitter: 0,
       contrast: 1.16,
@@ -303,6 +306,7 @@ export const ERAS = [
       grain: 0.09,
       flicker: 0.02,
       scratch: 0.12,
+      dust: 0.12,
       bloom: 0.18,
       vig: 1.05,
       vigColor: [0.14, 0.06, 0.02],

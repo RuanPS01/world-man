@@ -295,7 +295,7 @@ class GLPost {
     gl.uniform1f(u.uSat, fx.sat);
     gl.uniform1f(u.uContrast, fx.contrast);
     gl.uniform1f(u.uBright, this.film.bright);
-    gl.uniform1f(u.uDust, fx.scratch);
+    gl.uniform1f(u.uDust, fx.dust || 0);
     gl.uniform1f(u.uTime, this.film.t);
     gl.uniform2f(u.uJitter, this.film.jitter[0], this.film.jitter[1]);
     const s = this.film.scratch;
